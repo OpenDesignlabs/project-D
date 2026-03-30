@@ -1,0 +1,523 @@
+import type { LucideIcon } from 'lucide-react';
+
+// ─── WASM LAYOUT ENGINE ───────────────────────────────────────────────────────
+// Returned by ProjectContext.querySnapping(). Defined here (not in ProjectContext)
+// so EditorContextType can reference it without a circular import.
+export interface SnapResult {
+    x: number;
+    y: number;
+    guides: Array<{ orientation: string; pos: number; start: number; end: number; guide_type: string }>;
+}
+
+// ─── SIDEBAR PANEL ────────────────────────────────────────────────────────────
+// Canonical union of all valid panel identifiers. Defined here so EditorContextType
+// can reference it without importing from UIContext (avoids circular deps).
+export type SidebarPanel =
+    | 'add' | 'layers' | 'pages' | 'assets' | 'settings' | 'files'
+    | 'npm' | 'icons' | 'theme' | 'data' | 'marketplace' | 'backend'
+    | 'deploy' | 'loader' | 'stitch' | 'figma' | 'mcp' | null;
+
+export type ActionType =
+    | { type: 'NAVIGATE'; payload: string }
+    | { type: 'OPEN_MODAL'; payload: string }
+    | { type: 'SCROLL_TO'; payload: string }
+    | { type: 'TOGGLE_VISIBILITY'; payload: string }
+    // New Interaction Builder Types
+    | { action: 'link'; value: string }
+    | { action: 'scroll'; value: string }
+    | { action: 'navigate'; value: string };
+
+export interface GlobalStyles {
+    colors: Record<string, string>;
+    fonts: Record<string, string>;
+}
+
+export interface Asset {
+    id: string;
+    type: 'image';
+    url: string;
+    name: string;
+}
+
+/**
+ * AI-SOURCE-1 [PERMANENT]: AiSourceMeta is stamped onto custom_code nodes
+ * at generation time by sanitizeAIElements (aiHelpers.ts).
+ * It is the single source of truth for:
+ *   1. Canvas section badges (RenderNode section name chip)
+ *   2. RightSidebar AI node panel (original prompt, regenerate button)
+ *   3. Layers panel AI badge
+ *   4. MagicBar "Edit Selected" mode (pre-fills prompt from aiSource.prompt)
+ * Never set manually — only written by the AI generation pipeline.
+ */
+export interface AiSourceMeta {
+    /** The user's original prompt that produced this section. */
+    prompt: string;
+    /** Matches the // SECTION: marker name and element.name. */
+    sectionName: string;
+    /** Model string, e.g. "zai-org/GLM-5:zai-org". */
+    model: string;
+    /** Unix ms timestamp when generation completed. */
+    generatedAt: number;
+}
+
+export interface VectraNode {
+    id: string;
+    type: string;
+    name: string;
+    content?: string;
+    children?: string[];
+    src?: string;
+    locked?: boolean;
+    hidden?: boolean;
+    events?: { onClick?: ActionType; };
+    // --- LIVE COMPILER: Stores raw React code for AI-generated custom components ---
+    code?: string;
+    /**
+     * CIS-1 — Component import identity.
+     * Present on nodes that represent real React components (marketplace, npm,
+     * user-registered). Absent on nodes that map to native HTML elements.
+     * Drives import statement generation in all export paths.
+     * Never present on: div, p, h1, img, input, button, icon, canvas, webpage.
+     */
+    importMeta?: ComponentImportMeta;
+    /**
+     * AI-SOURCE-1 [PERMANENT]: Present only on nodes created by the AI pipeline
+     * (type === 'custom_code' with injected .code). Absent on all hand-placed nodes.
+     * Drives canvas badges, RightSidebar AI panel, and the "Edit Selected" re-prompt path.
+     */
+    aiSource?: AiSourceMeta;
+    props: {
+        className?: string;
+        style?: React.CSSProperties;
+        /**
+         * Direction A — Responsive Breakpoint Editing
+         * Per-node style overrides applied at specific viewport widths.
+         * Overrides are ADDITIVE — they merge over base `style` at the breakpoint.
+         * mobile:  max-width: 768px  | tablet: max-width: 1024px
+         */
+        breakpoints?: BreakpointMap;
+        layoutMode?: 'canvas' | 'flex' | 'grid';
+        stackOnMobile?: boolean;
+        placeholder?: string;
+        iconName?: string;
+        iconSize?: number;
+        iconClassName?: string;
+        id?: string;
+        [key: string]: any;
+    };
+}
+
+
+export type VectraProject = Record<string, VectraNode>;
+
+/**
+ * Direction A — BreakpointMap
+ * additive style overrides keyed by viewport.
+ * desktop (>1024px) → base props.style  (no override needed)
+ * tablet  (≤1024px) → props.breakpoints.tablet merges over base
+ * mobile  (≤768px)  → props.breakpoints.mobile merges over base
+ *
+ * WHY NOT TAILWIND CLASSES
+ * Tailwind responsive prefixes (md:, sm:) require compile-time class knowledge.
+ * Since Vectra generates arbitrary pixel values, inline style overrides compiled
+ * to @media CSS rules (via buildBreakpointCSS) are the correct approach.
+ */
+export interface BreakpointMap {
+    /** Applied at max-width: 768px (mobile phones) */
+    mobile?: Partial<React.CSSProperties>;
+    /** Applied at max-width: 1024px (tablets) */
+    tablet?: Partial<React.CSSProperties>;
+}
+
+/**
+ * CIS-1 — Component Identity System
+ * ─────────────────────────────────
+ * Carries the import identity for any registered component that is NOT a
+ * raw HTML element (div, p, h1, etc.). Set on VectraNode at creation time
+ * by copying it from ComponentConfig.importMeta.
+ *
+ * This is the single source of truth that drives:
+ *   1. codeGenerator.ts — correct import statement in exported JSX
+ *   2. GitHub publish    — correct import in pushed repo files
+ *   3. @vectra/loader    — bidirectional component registration
+ *
+ * ABSENT  = the node is a native HTML element (p, div, h1, img, etc.)
+ * PRESENT = the node is a real React component from a package or local path
+ */
+export interface ComponentImportMeta {
+    /**
+     * npm package name or project-relative path.
+     * npm package:    '@acme/ui'  | 'framer-motion' | 'recharts'
+     * relative path:  './components/Button' | '../shared/Card'
+     * Vectra internal: '../components/marketplace/HeroGeometric'
+     */
+    packageName: string;
+
+    /**
+     * The exported identifier, used verbatim as the JSX tag name.
+     * Default export: the local binding name  →  'HeroGeometric'
+     * Named export:   the exact export name   →  'Button' | 'LineChart'
+     *
+     * This value IS the JSX tag: <HeroGeometric /> <Button /> <LineChart />
+     */
+    exportName: string;
+
+    /**
+     * true  → default import:  import HeroGeometric from '../components/marketplace/HeroGeometric'
+     * false → named import:    import { Button } from '@acme/ui'
+     * @default false
+     */
+    isDefaultExport?: boolean;
+    
+    /**
+     * Optional list of named exports that should be imported.
+     * Use case: import { Icon, Button } from '@package'
+     */
+    namedExports?: string[];
+
+    /**
+     * Semver version range — written into package.json dependencies when
+     * packageName is an npm package (not a relative path starting with '.').
+     * Example: '^2.0.0' | '~1.5.3'
+     * Omit for relative paths or when version pinning is not required.
+     */
+    version?: string;
+}
+
+/**
+ * Direction D — PageSEO
+ * Per-page metadata fields — maps directly to Next.js Metadata API.
+ * All fields optional — generateNextPage() uses page.name as fallback.
+ */
+export interface PageSEO {
+    /** <title> tag — falls back to "${page.name} | Vectra App" */
+    title?: string;
+    /** <meta name="description"> */
+    description?: string;
+    /** og:title — falls back to title, then page.name */
+    ogTitle?: string;
+    /** og:description — falls back to description */
+    ogDescription?: string;
+    /** og:image — absolute URL required for social sharing */
+    ogImage?: string;
+    /** <link rel="canonical"> — full URL including domain */
+    canonical?: string;
+    /** robots noindex — hides page from search engines when true */
+    noIndex?: boolean;
+}
+
+// Page definition for Multi-Page Architecture
+export interface Page {
+    id: string;
+    name: string;
+    slug: string;       // URL path (e.g., '/', '/about', '/contact')
+    rootId: string;     // Pointer to the page's root element in VectraProject
+    seo?: PageSEO;      // per-page SEO metadata
+    /** FIG-FUTURE-1: hidden pages are staging areas (e.g. component-mode Figma imports).
+     *  Not shown in the Pages panel. Set when name starts with '__figma_comp__'. */
+    hidden?: boolean;
+}
+
+/**
+ * Lightweight project metadata — stored in the project index (not the element tree).
+ * Kept small so the Dashboard renders the full list from a single IDB read.
+ */
+export interface ProjectMeta {
+    /** UUID generated once at project creation. Never changes. */
+    id: string;
+    /** Human-readable project name. User-editable from the Dashboard. */
+    name: string;
+    /** Framework chosen at project creation. */
+    framework: Framework;
+    /** Unix timestamp (ms) — set once at creation. */
+    createdAt: number;
+    /** Unix timestamp (ms) — updated every autosave tick. */
+    lastEditedAt: number;
+    /** Number of pages in the project — updated on autosave. Quick display info. */
+    pageCount: number;
+    /** Optional hex accent color shown as a dot on the Dashboard card. */
+    color?: string;
+    /** Optional short description shown on the Dashboard card. */
+    description?: string;
+}
+
+export interface Guide {
+    orientation: 'horizontal' | 'vertical';
+    pos: number;
+    start: number;
+    end: number;
+    label?: string;
+    type: 'align' | 'gap';
+}
+
+// Component Categories for Insert Drawer
+export type ComponentCategory = 'basic' | 'layout' | 'forms' | 'media' | 'sections';
+
+export interface ComponentConfig {
+    icon: LucideIcon;
+    label: string;
+    category: ComponentCategory;
+    defaultProps: any;
+    defaultContent?: string;
+    src?: string;
+    /**
+     * CIS-1 — If set, nodes created from this config are real React components.
+     * Copied onto VectraNode.importMeta at drop/instantiation time.
+     * Drives correct import statements across all export paths.
+     */
+    importMeta?: ComponentImportMeta;
+    /**
+     * Phase A — Component-First Canvas
+     * ──────────────────────────────────
+     * Optional reference to the actual React component constructor.
+     * When present, RenderNode renders this component directly on the canvas
+     * instead of the styled-div fallback path.
+     *
+     * WHEN TO SET:
+     *   registerComponent('my_button', { component: MyButton, importMeta: {...} })
+     *   → canvas renders <MyButton /> exactly as it appears in the real codebase.
+     *
+     * WHEN TO OMIT:
+     *   Native HTML elements (text, container, div, p, h1...) — no real component.
+     *   Marketplace items in COMPONENT_TYPES — their lazy refs live in RenderNode.
+     *
+     * ABSENT  → falls through to hardcoded chain or styled-div rendering
+     * PRESENT → RenderNode renders <component {...props} /> inside Suspense
+     */
+    component?: React.ComponentType<any>;
+    /**
+     * Phase B — @vectra/loader source code field.
+     * ─────────────────────────────────────────────
+     * Present when a component was registered via the loader bridge.
+     * Contains the raw JSX/TSX source (no import statements) — the same
+     * format LiveComponent expects.
+     *
+     * RenderNode Phase B routing: fires when element.importMeta is set AND
+     * element.code is absent AND this field is present on the registry entry.
+     *
+     * PHASE-B-3: MUST NOT be set for marketplace items in constants.ts.
+     * The code field is exclusively for @vectra/loader registered components.
+     *
+     * ABSENT  = Phase A path (runtime component ref) or native HTML element
+     * PRESENT = Phase B path (loader-registered, compile-on-demand)
+     */
+    code?: string;
+}
+
+export interface DragData {
+    type: 'NEW' | 'TEMPLATE' | 'ASSET' | 'ASSET_IMAGE' | 'ICON' | 'DATA_BINDING';
+    payload: string;
+    meta?: any;
+    dropIndex?: number;
+    dropParentId?: string;
+}
+
+export interface InteractionState {
+    type: 'MOVE' | 'RESIZE';
+    itemId: string;         // primary node (anchor for single-node ops)
+    startX?: number;
+    startY?: number;
+    startRect?: { left: number; top: number; width: number; height: number };
+    handle?: string;
+    // ── MULTI-SELECT GROUP MOVE ────────────────────────────────────────────
+    // Present when a multi-select drag begins. Absent for all single-node ops.
+    // MULTI-MOVE-1 [PERMANENT]: startRects populated at drag-start (pointerDown)
+    // from live elements state — not from a closure. Read once, stable for the
+    // entire drag gesture. Never updated during pointermove.
+    itemIds?: string[];                                              // all selected node IDs
+    startRects?: Record<string, { left: number; top: number }>;    // per-node origin
+}
+
+export type EditorTool = 'select' | 'hand' | 'type';
+export type DeviceType = 'desktop' | 'tablet' | 'mobile';
+
+// View Mode: Visual (Design) vs Skeleton (Layout)
+export type ViewMode = 'visual' | 'skeleton';
+
+// Extended DataSource — mirrors ProjectContext's authoritative copy.
+export type DataSourceKind = 'rest' | 'supabase' | 'planetscale';
+
+export interface DataSource {
+    id: string;
+    name: string;
+    kind?: DataSourceKind;
+    url: string;
+    method: 'GET' | 'POST';
+    headers?: Record<string, string>;
+    body?: string;
+    supabaseAnonKey?: string;
+    supabaseTable?: string;
+    psHost?: string;
+    psUsername?: string;
+    psPassword?: string;
+    psDatabase?: string;
+    envVarMap?: Record<string, string>;
+    data: any;
+    status?: 'idle' | 'connecting' | 'connected' | 'error';
+    errorMessage?: string;
+    lastFetchedAt?: string;
+}
+
+export interface EditorContextType {
+    // ── Project core ──────────────────────────────────────────────────────────
+    elements: VectraProject;
+    setElements: React.Dispatch<React.SetStateAction<VectraProject>>;
+    /** Stable ref — safe in useEffect deps without triggering re-runs */
+    elementsRef: React.MutableRefObject<VectraProject>;
+    updateProject: (newElements: VectraProject) => void;
+    /** Write elements + push undo entry atomically */
+    pushHistory: (newElements: VectraProject) => void;
+    deleteElement: (id: string) => void;
+    duplicateElement: (id: string) => void;
+    reorderElement: (id: string, newParentId: string, index: number) => void;
+    instantiateTemplate: (rootId: string, nodes: VectraProject) => { newNodes: VectraProject; rootId: string };
+    /** Precomputed child → parent map. Updated on every elements change. */
+    parentMap: Map<string, string>;
+
+    // ── Pages ─────────────────────────────────────────────────────────────────
+    pages: Page[];
+    activePageId: string;
+    setActivePageId: (id: string) => void;
+    /** Resolved page ID — follows redirects and preview overrides */
+    realPageId: string;
+    addPage: (name: string, slug?: string) => void;
+    deletePage: (id: string) => void;
+    switchPage: (pageId: string) => void;
+    /** STI-PAGE-1 / BUG-4-FIX: object-arg. Positional form caused white-screen crash. */
+    importPage: (args: { pageName: string; slug: string; nodes: VectraProject; rootId: string }) => void;
+    updatePageSEO: (pageId: string, seo: Partial<PageSEO>) => void;
+
+    // ── History ───────────────────────────────────────────────────────────────
+    history: { undo: () => void; redo: () => void };
+    /** Flat stable reference — safe in useEffect dep arrays (S-2) */
+    undo: () => void;
+    /** Flat stable reference — safe in useEffect dep arrays (S-2) */
+    redo: () => void;
+
+    // ── Interaction engine ────────────────────────────────────────────────────
+    /** 60fps pointer-move handler — updates element rect without pushing history */
+    handleInteractionMove: (e: PointerEvent) => void;
+    /** pointer-up handler — commits one history entry and clears interaction state */
+    handleInteractionEnd: () => void;
+
+    // ── Snapping / layout engine ──────────────────────────────────────────────
+    /** Loads siblings of the dragged node into the WASM snapping engine */
+    syncLayoutEngine: (draggedId: string) => void;
+    /** 60fps snap query — 4 scalar args cross Wasm boundary. Returns null if engine unavailable. */
+    querySnapping: (x: number, y: number, w: number, h: number, threshold?: number) => SnapResult | null;
+
+    // ── Theme ─────────────────────────────────────────────────────────────────
+    theme: any;
+    updateTheme: (updates: any) => void;
+
+    // ── Data sources ──────────────────────────────────────────────────────────
+    dataSources: DataSource[];
+    addDataSource: (ds: DataSource) => void;
+    removeDataSource: (id: string) => void;
+    updateDataSource: (id: string, patch: Partial<Omit<DataSource, 'id'>>) => void;
+
+    // ── API routes ────────────────────────────────────────────────────────────
+    apiRoutes: ApiRoute[];
+    /** 3-arg form: addApiRoute(name, path, methods) — matches ProjectContext runtime */
+    addApiRoute: (name: string, path: string, methods: HttpMethod[]) => void;
+    updateApiRoute: (id: string, patch: Partial<Omit<ApiRoute, 'id'>>) => void;
+    deleteApiRoute: (id: string) => void;
+
+    // ── Framework ─────────────────────────────────────────────────────────────
+    framework: Framework;
+    setFramework: (fw: Framework) => void;
+
+    // ── AI ────────────────────────────────────────────────────────────────────
+    runAI: (prompt: string, pageId: string) => void;
+
+    // ── Multi-project ─────────────────────────────────────────────────────────
+    projectId: string;
+    projectName: string;
+    projectIndex: ProjectMeta[];
+    createNewProject: (templateId: string) => void;
+    exitProject: () => void;
+    /** Takes full ProjectMeta (not id) — matches ProjectContext runtime */
+    loadProject: (meta: ProjectMeta) => Promise<void>;
+    renameProject: (id: string, name: string) => void;
+    /** Takes full ProjectMeta (not id) — matches ProjectContext runtime */
+    duplicateProject: (meta: ProjectMeta) => Promise<void>;
+    deleteProject: (id: string) => Promise<void>;
+    /** Sprint 2 soft-delete — removes from index, preserves IDB data */
+    removeProjectFromIndex: (id: string) => void;
+    purgeProjectData: (id: string) => Promise<void>;
+    restoreProjectToIndex: (meta: ProjectMeta) => void;
+
+    // ── Selection / UI state ──────────────────────────────────────────────────
+    selectedId: string | null;
+    setSelectedId: (id: string | null) => void;
+    hoveredId: string | null;
+    setHoveredId: (id: string | null) => void;
+    activeTool: EditorTool;
+    setActiveTool: (tool: EditorTool) => void;
+    zoom: number;
+    setZoom: React.Dispatch<React.SetStateAction<number>>;
+    pan: { x: number; y: number };
+    setPan: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
+    isPanning: boolean;
+    setIsPanning: (isPanning: boolean) => void;
+    dragData: DragData | null;
+    setDragData: (data: DragData | null) => void;
+    interaction: InteractionState | null;
+    setInteraction: React.Dispatch<React.SetStateAction<InteractionState | null>>;
+    previewMode: boolean;
+    setPreviewMode: (mode: boolean) => void;
+    viewMode: ViewMode;
+    setViewMode: (mode: ViewMode) => void;
+    device: DeviceType;
+    setDevice: (device: DeviceType) => void;
+    activePanel: SidebarPanel;
+    setActivePanel: React.Dispatch<React.SetStateAction<SidebarPanel>>;
+    togglePanel: (panel: SidebarPanel) => void;
+    isInsertDrawerOpen: boolean;
+    toggleInsertDrawer: () => void;
+    isMagicBarOpen: boolean;
+    setMagicBarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    guides: Guide[];
+    assets: Asset[];
+    addAsset: (file: File) => void;
+    globalStyles: GlobalStyles;
+    setGlobalStyles: React.Dispatch<React.SetStateAction<GlobalStyles>>;
+    currentView: 'dashboard' | 'editor';
+    setCurrentView: (view: 'dashboard' | 'editor') => void;
+    runAction: (action: ActionType) => void;
+    componentRegistry: Record<string, ComponentConfig>;
+    registerComponent: (id: string, config: ComponentConfig) => void;
+    recentComponents: string[];
+    addRecentComponent: (id: string) => void;
+}
+
+// ─── PHASE A: Framework type ──────────────────────────────────────────────────
+// Stored in project metadata (ProjectContext) to determine VFS template,
+// code generator, and export format. Default: 'nextjs'.
+export type Framework = 'nextjs' | 'vite';
+
+// ─── PHASE D FOUNDATION: API Route type ────────────────────────────────────── Represents a single backend API route in the project. Will be stored in ProjectContext as apiRoutes: ApiRoute[]
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+export interface ApiRoute {
+    /** Unique identifier (nanoid) */
+    id: string;
+    /** Display name shown in the Backend panel, e.g. "Get Users" */
+    name: string;
+    /**
+     * URL path relative to /api/, e.g. "users" → /api/users
+     * Supports dynamic segments: "users/[id]" → /api/users/[id]
+     */
+    path: string;
+    /** HTTP methods this route handles */
+    methods: HttpMethod[];
+    /**
+     * Raw TypeScript handler code authored in the inline editor.
+     * Written verbatim into app/api/[path]/route.ts.
+     */
+    handlerCode: string;
+    /** ISO timestamp of last edit — used for dirty-check in useFileSync Phase D */
+    updatedAt: string;
+}
+

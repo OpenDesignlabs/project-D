@@ -1,0 +1,5 @@
+packages:
+  - 'vectra-studio'
+  - 'vectra-marketplace'
+  - 'vectra-types'
+  - 'vectra-server'

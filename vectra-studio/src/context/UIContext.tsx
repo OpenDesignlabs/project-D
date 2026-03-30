@@ -1,0 +1,322 @@
+/**
+ * --- UI CONTEXT -------------------------------------------------------------
+ * Manages ephemeral, per-session UI state that changes frequently:
+ * selected element, active tool, zoom, pan, drag, sidebar panels, preview mode.
+ *
+ * Separated from ProjectContext so that hovering, zooming, or switching panels
+ * does not re-render components that only care about document data.
+ */
+
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useMarketplaceSync } from '../hooks/useMarketplaceSync';
+import type { DragData, InteractionState, Guide, Asset, GlobalStyles, EditorTool, DeviceType, ActionType, SidebarPanel } from '../types';
+
+/** Per-page viewport snapshot — saved when switching away from a page. */
+interface PageViewport {
+    selectedId: string | null;
+    pan: { x: number; y: number };
+    zoom: number;
+}
+
+
+export type { SidebarPanel } from '../types'; // canonical definition lives in types/index.ts
+export type AppView = 'dashboard' | 'editor';
+export type ViewMode = 'visual' | 'skeleton';
+
+interface UIContextType {
+    // ── Selection ─────────────────────────────────────────────────────────────
+    selectedId: string | null;
+    setSelectedId: (id: string | null) => void;
+    // hoveredId lives in HoverContext to prevent 60fps pointer-move from re-rendering all RenderNode instances.
+    // Item 2 — Multi-select set (always contains selectedId as the anchor)
+    selectedIds: Set<string>;
+    addToSelection: (id: string) => void;
+    removeFromSelection: (id: string) => void;
+    clearSelection: () => void;
+    isInMultiSelect: (id: string) => boolean;
+
+    // ── Tool & viewport ───────────────────────────────────────────────────────
+    activeTool: EditorTool;
+    setActiveTool: (tool: EditorTool) => void;
+    zoom: number;
+    setZoom: React.Dispatch<React.SetStateAction<number>>;
+    // zoomRef — stable ref so event handlers read zoom without subscribing to the zoom state.
+    zoomRef: React.MutableRefObject<number>;
+    pan: { x: number; y: number };
+    setPan: React.Dispatch<React.SetStateAction<{ x: number; y: number }>>;
+    isPanning: boolean;
+    setIsPanning: (v: boolean) => void;
+
+    // ── Drag & interaction ────────────────────────────────────────────────────
+    dragData: DragData | null;
+    setDragData: (data: DragData | null) => void;
+    interaction: InteractionState | null;
+    setInteraction: React.Dispatch<React.SetStateAction<InteractionState | null>>;
+    guides: Guide[];
+    setGuides: React.Dispatch<React.SetStateAction<Guide[]>>;
+
+    // ── Preview / device ──────────────────────────────────────────────────────
+    previewMode: boolean;
+    setPreviewMode: (v: boolean) => void;
+    device: DeviceType;
+    setDevice: (d: DeviceType) => void;
+    /** activeBreakpoint: derived from device. Drives which style object (base/tablet/mobile) receives property writes. */
+    activeBreakpoint: 'desktop' | 'tablet' | 'mobile';
+    viewMode: ViewMode;
+    setViewMode: (m: ViewMode) => void;
+
+    // ── Panels ────────────────────────────────────────────────────────────────
+    activePanel: SidebarPanel;
+    setActivePanel: React.Dispatch<React.SetStateAction<SidebarPanel>>;
+    togglePanel: (panel: SidebarPanel) => void;
+    isInsertDrawerOpen: boolean;
+    toggleInsertDrawer: () => void;
+
+    // ── Magic bar ─────────────────────────────────────────────────────────────
+    isMagicBarOpen: boolean;
+    setMagicBarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+
+    // ── Assets & styles ───────────────────────────────────────────────────────
+    assets: Asset[];
+    addAsset: (file: File) => void;
+    globalStyles: GlobalStyles;
+    setGlobalStyles: React.Dispatch<React.SetStateAction<GlobalStyles>>;
+
+    // ── App view (dashboard vs editor) ────────────────────────────────────────
+    currentView: AppView;
+    setCurrentView: (v: AppView) => void;
+
+    /** Snapshots the current selectedId/pan/zoom for a page before navigating away. */
+    savePageViewport: (pageId: string) => void;
+
+    /** Restores the cached viewport for a page, or resets to a clean slate if the page was never visited. */
+    restorePageViewport: (pageId: string) => void;
+
+    // ── Action runner (links, scroll) ─────────────────────────────────────────
+    runAction: (action: ActionType) => void;
+
+    // ── Component registry / recents ─────────────────────────────────────────
+    componentRegistry: Record<string, any>;
+    registerComponent: (id: string, config: any) => void;
+    recentComponents: string[];
+    addRecentComponent: (id: string) => void;
+}
+
+// ─── CONTEXT ─────────────────────────────────────────────────────────────────
+
+const UIContext = createContext<UIContextType | null>(null);
+
+// ─── PROVIDER ────────────────────────────────────────────────────────────────
+
+export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [selectedIdRaw, setSelectedIdRaw] = useState<string | null>(null);
+    // hoveredId moved to HoverContext so 60fps pointer-move doesn't re-render all RenderNode instances.
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    // Mirror selectedIds into a stable ref so isInMultiSelect has a [] dep array, avoiding 200 useCallback invalidations per shift-click.
+    const selectedIdsRef = useRef<Set<string>>(new Set());
+    useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
+
+    // Unified single-select entry point — keeps selectedIds in sync as a singleton for all existing callers.
+    const setSelectedId = useCallback((id: string | null) => {
+        setSelectedIdRaw(id);
+        setSelectedIds(id ? new Set([id]) : new Set());
+    }, []);
+    const selectedId = selectedIdRaw;
+
+    const addToSelection = useCallback((id: string) => {
+        setSelectedIds(prev => new Set([...prev, id]));
+        setSelectedIdRaw(id); // anchor tracks latest added
+    }, []);
+
+    const removeFromSelection = useCallback((id: string) => {
+        setSelectedIds(prev => { const n = new Set(prev); n.delete(id); return n; });
+        setSelectedIdRaw(prev => prev === id ? null : prev);
+    }, []);
+
+    const clearSelection = useCallback(() => {
+        setSelectedIdRaw(null);
+        setSelectedIds(new Set());
+    }, []);
+
+    const isInMultiSelect = useCallback(
+        (id: string) => selectedIdsRef.current.has(id),
+        [] // eslint-disable-line react-hooks/exhaustive-deps — reads via stable ref
+    );
+    const [activeTool, setActiveTool] = useState<EditorTool>('select');
+    const [zoom, setZoom] = useState(0.5);
+    // Stable zoom ref — event handlers read this directly so they don't subscribe to the 60fps zoom state.
+    const zoomRef = useRef(zoom);
+    useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+    const [pan, setPan] = useState({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const [dragData, setDragData] = useState<DragData | null>(null);
+    const [interaction, setInteraction] = useState<InteractionState | null>(null);
+    const [guides, setGuides] = useState<Guide[]>([]);
+    const [previewMode, setPreviewMode] = useState(false);
+    const [device, setDeviceState] = useState<DeviceType>('desktop');
+    const [viewMode, setViewMode] = useState<ViewMode>('visual');
+    const [activePanel, setActivePanel] = useState<SidebarPanel>(null);
+    const [isInsertDrawerOpen, setIsInsertDrawerOpen] = useState(false);
+    const [isMagicBarOpen, setMagicBarOpen] = useState(false);
+    const [assets, setAssets] = useState<Asset[]>([]);
+    const [globalStyles, setGlobalStyles] = useState<GlobalStyles>({ colors: { primary: '#3b82f6', secondary: '#10b981', accent: '#f59e0b', dark: '#1e293b' }, fonts: {} });
+    const [componentRegistry, setComponentRegistry] = useState<Record<string, any>>({});
+    useMarketplaceSync(setComponentRegistry);
+    const [recentComponents, setRecentComponents] = useState<string[]>([]);
+
+    // ── Per-page viewport cache (Direction 3 — Item 0 perf fix) ────────────────── THE PROBLEM THIS FIXES: savePageViewport previously closed over selectedId, pan, and zoom directly
+    const pageViewportCache = useRef<Map<string, PageViewport>>(new Map());
+
+    // Stable ref — always holds the latest selectedId/pan/zoom without causing
+    // savePageViewport to be recreated when those values change.
+    const viewportStateRef = useRef<PageViewport>({
+        selectedId: null,
+        pan: { x: 0, y: 0 },
+        zoom: 0.5,
+    });
+
+    // Keep the ref in sync. This effect runs whenever the viewport state changes,
+    // but it does NOT cause any callbacks that depend on it to be recreated.
+    useEffect(() => {
+        viewportStateRef.current = { selectedId, pan, zoom };
+    }, [selectedId, pan, zoom]);
+
+    // Stable identity — [] dep array. Reads from viewportStateRef, never from
+    // the closed-over state variables. Zero listener churn during 60fps pan.
+    const savePageViewport = useCallback((pageId: string) => {
+        pageViewportCache.current.set(pageId, { ...viewportStateRef.current });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Stable identity — setter functions from useState are guaranteed stable
+    // by React, so this is safe with [].
+    const restorePageViewport = useCallback((pageId: string) => {
+        const cached = pageViewportCache.current.get(pageId);
+        if (cached) {
+            setSelectedId(cached.selectedId);
+            setPan(cached.pan);
+            setZoom(cached.zoom);
+        } else {
+            setSelectedId(null);
+            setPan({ x: 0, y: 0 });
+            setZoom(1);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // App view — persisted to localStorage
+    const [currentView, setCurrentViewState] = useState<AppView>(() =>
+        (localStorage.getItem('vectra_view') as AppView) || 'dashboard'
+    );
+    const setCurrentView = useCallback((v: AppView) => {
+        setCurrentViewState(v);
+        localStorage.setItem('vectra_view', v);
+    }, []);
+
+    // Listen for project exit event dispatched by ProjectContext
+    useEffect(() => {
+        const handler = () => setCurrentView('dashboard');
+        window.addEventListener('vectra:exit-project', handler);
+        return () => window.removeEventListener('vectra:exit-project', handler);
+    }, [setCurrentView]);
+
+    // Listen for project open event dispatched by Dashboard
+    useEffect(() => {
+        const handler = () => setCurrentView('editor');
+        window.addEventListener('vectra:open-project', handler);
+        return () => window.removeEventListener('vectra:open-project', handler);
+    }, [setCurrentView]);
+
+    // evict deleted page's viewport cache entry so pageViewportCache
+    // doesn't accumulate indefinitely on AI-driven page churn.
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const pageId = (e as CustomEvent<{ pageId: string }>).detail?.pageId;
+            if (pageId) pageViewportCache.current.delete(pageId);
+        };
+        window.addEventListener('vectra:page-deleted', handler);
+        return () => window.removeEventListener('vectra:page-deleted', handler);
+    }, []); // pageViewportCache is a ref — stable, no deps needed
+
+    // Clear guides when interaction ends
+    useEffect(() => { if (!interaction) setGuides([]); }, [interaction]);
+
+    // Magic bar keyboard shortcut (Cmd+K / Ctrl+K)
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setMagicBarOpen(p => !p); }
+            if (e.key === 'Escape' && isMagicBarOpen) setMagicBarOpen(false);
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [isMagicBarOpen]);
+
+    const setDevice = (d: DeviceType) => {
+        setDeviceState(d);
+        setZoom(d === 'mobile' ? 1 : 0.8);
+    };
+
+    // Direction A: activeBreakpoint is a pure derivation from device — no state needed.
+    // It routes RightSidebar style writes to the correct storage key.
+    const activeBreakpoint: 'desktop' | 'tablet' | 'mobile' =
+        device === 'mobile' ? 'mobile' :
+            device === 'tablet' ? 'tablet' : 'desktop';
+
+    const addAsset = (file: File) => {
+        // generate ID synchronously BEFORE readAsDataURL. Date.now() inside onload collides on batch drops (3 files dropped at once: all FileReader.onload callbacks can resolve within the same ms tick)
+        const assetId = `asset-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+        const reader = new FileReader();
+        reader.onload = (e) => setAssets(prev => [
+            ...prev,
+            { id: assetId, type: 'image', url: e.target?.result as string, name: file.name },
+        ]);
+        reader.readAsDataURL(file);
+    };
+
+    const runAction = (act: ActionType) => {
+        if ('action' in act) {
+            if (act.action === 'link' && act.value) {
+                try {
+                    const url = new URL(act.value, window.location.href);
+                    if (url.protocol === 'http:' || url.protocol === 'https:') window.open(act.value, '_blank', 'noopener,noreferrer');
+                    else console.warn('[Security] Blocked non-http URL:', url.protocol);
+                } catch { console.warn('[Security] Blocked invalid URL:', act.value); }
+            } else if (act.action === 'scroll' && act.value) {
+                document.getElementById(act.value)?.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    };
+
+    return (
+        <UIContext.Provider value={{
+            selectedId, setSelectedId,
+            // hoveredId/setHoveredId removed — now in HoverContext (isolated for perf).
+            // Item 2 multi-select
+            selectedIds, addToSelection, removeFromSelection, clearSelection, isInMultiSelect,
+            activeTool, setActiveTool, zoom, setZoom, zoomRef, pan, setPan,
+            isPanning, setIsPanning, dragData, setDragData,
+            interaction, setInteraction, guides, setGuides,
+            previewMode, setPreviewMode, device, setDevice, activeBreakpoint,
+            viewMode, setViewMode, activePanel, setActivePanel,
+            togglePanel: (p) => setActivePanel(cur => cur === p ? null : p),
+            isInsertDrawerOpen, toggleInsertDrawer: () => setIsInsertDrawerOpen(p => !p),
+            isMagicBarOpen, setMagicBarOpen,
+            assets, addAsset, globalStyles, setGlobalStyles,
+            currentView, setCurrentView, runAction,
+            componentRegistry,
+            registerComponent: (id, cfg) => setComponentRegistry(p => ({ ...p, [id]: cfg })),
+            recentComponents,
+            addRecentComponent: (id) => setRecentComponents(p => [id, ...p.filter(i => i !== id)].slice(0, 8)),
+            savePageViewport,
+            restorePageViewport,
+        }}>
+            {children}
+        </UIContext.Provider>
+    );
+};
+
+// ─── HOOK ─────────────────────────────────────────────────────────────────────
+
+export const useUI = (): UIContextType => {
+    const ctx = useContext(UIContext);
+    if (!ctx) throw new Error('useUI must be used within UIProvider');
+    return ctx;
+};
