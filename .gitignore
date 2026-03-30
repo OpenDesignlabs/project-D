@@ -30,6 +30,8 @@ Thumbs.db
 temp/
 .gemini/
 .antigravity/
+.agents/
+.agent/
 
 # ─── Rust / Wasm (vectra-engine) ──────────────────────────────────────────────
 target/
