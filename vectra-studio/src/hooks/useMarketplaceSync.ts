@@ -130,14 +130,18 @@ export function useMarketplaceSync(setRegistry: RegistrySetter): void {
                         // ── CIS-1: drives import statements in codeGenerator ──
                         importMeta,
 
-                        // ── Marketplace extras (non-breaking extras on ComponentConfig) ──
-                        // These are read by LeftSidebar's insert panel for display
+                        // ── Marketplace extras ──
                         _marketplaceId:      entry.id,
                         _marketplaceName:    entry.name,
                         _isOfficial:         entry.isOfficial,
                         _previewImageUrl:    entry.previewImageUrl,
                         _propsSchema:        entry.propsSchema,
                         _tags:               entry.tags,
+                        // _userImported: false means "auto-synced by useMarketplaceSync, not
+                        // explicitly added by the user via MarketplacePanel Add button".
+                        // MarketplacePanel.handleAdd sets this to true.
+                        // The insert drawer "Imported" tab filters on _userImported === true.
+                        _userImported:       false,
                     } as ComponentConfig;
                 }
 

@@ -71,27 +71,28 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
     <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 w-full">
       {/* ── Sidebar (Categories) ── */}
       <aside className="w-full lg:w-64 flex-shrink-0">
-        <div className="sticky top-28 flex flex-col gap-1.5 p-1 max-h-[calc(100vh-140px)] overflow-y-auto 
+        <nav aria-label="Component categories" className="sticky top-28 flex flex-col gap-1.5 p-1 max-h-[calc(100vh-140px)] overflow-y-auto 
                         scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-2">
           <div className="flex items-center gap-2 px-4 mb-3 text-m3-onSurfaceVariant font-bold text-xs tracking-widest uppercase">
-            <Compass size={14} className="text-m3-primary" />
+            <Compass size={14} className="text-m3-primary" aria-hidden="true" />
             Explore
           </div>
           {CATEGORIES.map(cat => (
             <button
               key={cat.value}
+              aria-pressed={category === cat.value}
               onClick={() => startTransition(() => setCategory(cat.value as ComponentCategory | 'all'))}
-              className={`flex items-center justify-between w-full px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ease-out
+              className={`flex items-center justify-between w-full px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary
                 ${category === cat.value
                   ? 'bg-m3-secondaryContainer text-m3-onSecondaryContainer shadow-sm ring-1 ring-white/[0.05]'
                   : 'bg-transparent text-m3-onSurfaceVariant hover:bg-white/[0.03] hover:text-m3-onSurface'
                 }`}
             >
               <span className="truncate">{cat.label}</span>
-              {category === cat.value && <ChevronRight size={14} className="opacity-70 flex-shrink-0" />}
+              {category === cat.value && <ChevronRight size={14} className="opacity-70 flex-shrink-0" aria-hidden="true" />}
             </button>
           ))}
-        </div>
+        </nav>
       </aside>
 
       {/* ── Main Content Area ── */}
@@ -100,24 +101,26 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           {/* Search */}
           <div className="relative flex-1 group">
-            <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant group-focus-within:text-m3-primary transition-colors" />
+            <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant group-focus-within:text-m3-primary transition-colors" aria-hidden="true" />
             <input
               type="text"
+              aria-label="Search components or tags"
               value={search}
               onChange={e => startTransition(() => setSearch(e.target.value))}
               placeholder="Search components or tags..."
               className="w-full bg-m3-surfaceContainerHigh/40 backdrop-blur-xl rounded-full pl-14 pr-12 py-3.5
                          text-base text-m3-onSurface placeholder:text-m3-onSurfaceVariant/60
-                         focus:outline-none focus:ring-2 focus:ring-m3-primary/50 focus:bg-m3-surfaceContainerHighest/60
+                         focus:outline-none focus:ring-2 focus:ring-m3-primary focus:bg-m3-surfaceContainerHighest/60
                          transition-all shadow-sm ring-1 ring-white/[0.05]"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant hover:text-m3-onSurface transition-colors bg-white/5 rounded-full p-1"
+                aria-label="Clear search"
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant hover:text-m3-onSurface transition-colors bg-white/5 rounded-full p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary"
                 title="Clear search"
               >
-                <X size={14} />
+                <X size={14} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -125,12 +128,13 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
           {/* Sort */}
           <div className="flex items-center gap-3">
             <div className="relative group">
-              <SlidersHorizontal size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant pointer-events-none group-hover:text-m3-onSurface transition-colors" />
+              <SlidersHorizontal size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant pointer-events-none group-hover:text-m3-onSurface transition-colors" aria-hidden="true" />
               <select
+                aria-label="Sort components"
                 value={sort}
                 onChange={e => setSort(e.target.value)}
                 className="appearance-none bg-m3-surfaceContainerHigh/40 backdrop-blur-xl rounded-full pl-12 pr-10 py-3.5 text-sm text-m3-onSurface font-semibold
-                           focus:outline-none focus:ring-2 focus:ring-m3-primary/50 cursor-pointer shadow-sm ring-1 ring-white/[0.05]
+                           focus:outline-none focus:ring-2 focus:ring-m3-primary cursor-pointer shadow-sm ring-1 ring-white/[0.05]
                            hover:bg-m3-surfaceContainerHighest/60 transition-all min-w-[160px]"
               >
                 {SORTS.map(s => (
@@ -156,9 +160,10 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
           {hasFilters && (
             <button
               onClick={() => { setSearch(''); setCategory('all'); }}
-              className="text-sm font-medium text-m3-primary hover:text-m3-primary/80 flex items-center gap-1.5 transition-colors bg-m3-primary/10 px-3 py-1.5 rounded-full"
+              aria-label="Clear all filters"
+              className="text-sm font-medium text-m3-primary hover:text-m3-primary/80 flex items-center gap-1.5 transition-colors bg-m3-primary/10 px-3 py-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary"
             >
-              <X size={14} /> Clear all
+              <X size={14} aria-hidden="true" /> Clear all
             </button>
           )}
         </div>

@@ -25,6 +25,7 @@ const DataPanel    = lazy(() => import('../panels/DataPanel').then(m => ({ defau
 const StitchPanel  = lazy(() => import('../panels/StitchPanel').then(m => ({ default: m.StitchPanel })));
 const FigmaPanel   = lazy(() => import('../panels/FigmaPanel').then(m => ({ default: m.FigmaPanel })));
 const MCPPanel     = lazy(() => import('../panels/MCPPanel').then(m => ({ default: m.MCPPanel })));
+const MarketplacePanel = lazy(() => import('../panels/MarketplacePanel').then(m => ({ default: m.MarketplacePanel })));
 
 /** Minimal spinner shown while a panel chunk is downloading */
 const PanelFallback = () => (
@@ -699,10 +700,12 @@ export const LeftSidebar = () => {
             ? Object.entries(componentRegistry)
                 .filter(([_type, config]) => {
                     const matchesSearch = search
-                        ? config.label.toLowerCase().includes(search.toLowerCase())
+                        ? (config.label ?? '').toLowerCase().includes(search.toLowerCase())
                         : true;
-                    // Marketplace entries are stamped with _marketplaceId by useMarketplaceSync
-                    return matchesSearch && !!(config as any)._marketplaceId;
+                    // Only show components explicitly added by user via MarketplacePanel Add button.
+                    // Auto-synced entries (_userImported: false) stay invisible here until the
+                    // user explicitly imports them — prevents the "all already added" confusion.
+                    return matchesSearch && !!(config as any)._userImported;
                 })
             : activeCat !== 'templates'
                 ? Object.entries(componentRegistry)
@@ -765,7 +768,7 @@ export const LeftSidebar = () => {
                     <NavButton icon={Server} active={activePanel === 'backend'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('backend'); }} tooltip="Backend (API Routes)" />
                 )}
                 <div className="w-8 h-px bg-[#4f4f4f] my-1" />
-                <NavButton icon={Store} active={activeCat === 'marketplace' && isInsertDrawerOpen} onClick={() => { setActiveCat('marketplace'); if (!isInsertDrawerOpen) toggleInsertDrawer(); setActivePanel(null); }} tooltip="Marketplace" />
+                <NavButton icon={Store} active={activePanel === 'marketplace'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('marketplace'); }} tooltip="Marketplace" />
                 <NavButton icon={Layers} active={activePanel === 'layers'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('layers'); }} tooltip="Layers" />
                 <NavButton icon={ImageIcon} active={activePanel === 'assets'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('assets'); }} tooltip="Assets" />
                 <div className="w-8 h-px bg-[#4f4f4f] my-1" />
@@ -1186,6 +1189,23 @@ export const LeftSidebar = () => {
                         </Suspense>
                     </div>
                 </div>
+            )}
+
+            {/* ── MARKETPLACE PANEL ─────────────────────────────────────────── */}
+            {activePanel === 'marketplace' && (
+                <Suspense fallback={<PanelFallback />}>
+                    <MarketplacePanel
+                        onClose={() => setActivePanel(null)}
+                        registerComponent={registerComponent}
+                        registeredIds={
+                            new Set(
+                                Object.entries(componentRegistry)
+                                    .filter(([, cfg]) => !!(cfg as any)._userImported)
+                                    .map(([, cfg]) => (cfg as any)._marketplaceId as string)
+                            )
+                        }
+                    />
+                </Suspense>
             )}
 
             {/* ── BACKEND (API Routes) PANEL ─────────────────────────────────── */}

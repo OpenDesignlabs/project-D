@@ -27,9 +27,11 @@ export function ComponentCard({ component }: ComponentCardProps) {
   return (
     <Link
       href={`/components/${component.slug}`}
+      aria-label={`View component: ${component.label}`}
       className="group relative flex flex-col bg-m3-surfaceContainer border border-m3-outlineVariant/30 rounded-3xl overflow-hidden
                  transition-all duration-300 ease-out hover:-translate-y-1
-                 shadow-sm hover:shadow-md hover:bg-m3-surfaceContainerHigh"
+                 shadow-sm hover:shadow-md hover:bg-m3-surfaceContainerHigh
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-m3-surfaceContainer"
     >
 
       {/* Preview area */}
@@ -61,8 +63,9 @@ export function ComponentCard({ component }: ComponentCardProps) {
         {/* Official badge */}
         {component.isOfficial && (
           <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 z-10
-                          bg-m3-primary rounded-full text-[10px] font-bold tracking-widest text-m3-onPrimary shadow-sm">
-            <ShieldCheck size={12} className="opacity-90" />
+                          bg-m3-primary rounded-full text-[10px] font-bold tracking-widest text-m3-onPrimary shadow-sm"
+               title="Official Component">
+            <ShieldCheck size={12} className="opacity-90" aria-hidden="true" />
             OFFICIAL
           </div>
         )}
@@ -100,18 +103,18 @@ export function ComponentCard({ component }: ComponentCardProps) {
         {/* Footer stats */}
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-m3-outlineVariant/20">
           <div className="flex items-center gap-4 text-m3-onSurfaceVariant/80 font-medium">
-            <span className="flex items-center gap-1.5 text-[11px] tracking-wide">
-              <Download size={12} className="text-m3-outline/60" />
+            <span className="flex items-center gap-1.5 text-[11px] tracking-wide" aria-label={`${component.downloads} downloads`}>
+              <Download size={12} className="text-m3-outline/60" aria-hidden="true" />
               {component.downloads.toLocaleString()}
             </span>
-            <span className="flex items-center gap-1.5 text-[11px] tracking-wide">
-              <Star size={12} className="text-m3-outline/60" />
+            <span className="flex items-center gap-1.5 text-[11px] tracking-wide" aria-label={`${component.stars} stars`}>
+              <Star size={12} className="text-m3-outline/60" aria-hidden="true" />
               {component.stars}
             </span>
           </div>
           {component.isVerified && (
-            <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase text-m3-tertiary bg-m3-tertiary/10 px-2 py-0.5 rounded-sm">
-              <Sparkles size={10} />
+            <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase text-m3-tertiary bg-m3-tertiary/10 px-2 py-0.5 rounded-sm" title="Verified Publisher">
+              <Sparkles size={10} aria-hidden="true" />
               Verified
             </span>
           )}

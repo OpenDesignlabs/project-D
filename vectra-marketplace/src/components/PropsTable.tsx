@@ -27,15 +27,15 @@ export function PropsTable({ props }: PropsTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-white/[0.07]">
+    <div className="overflow-x-auto rounded-xl border border-white/[0.07]" role="region" aria-label="Component properties table" tabIndex={0}>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-white/[0.07] bg-surface-2">
-            <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Prop</th>
-            <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Type</th>
-            <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Required</th>
-            <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Default</th>
-            <th className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Description</th>
+            <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Prop</th>
+            <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Type</th>
+            <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Required</th>
+            <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Default</th>
+            <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-white/40 uppercase tracking-wider">Description</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-white/[0.04]">

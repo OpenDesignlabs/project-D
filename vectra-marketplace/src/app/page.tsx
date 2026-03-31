@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Boxes, ArrowRight, Sparkles, ShieldCheck, Zap } from 'lucide-react';
+import { Boxes, ArrowRight, Sparkles, ShieldCheck, Zap, Github, Search, Moon, Star } from 'lucide-react';
 import { getComponents } from '../lib/registry';
 import { ComponentGrid } from '../components/ComponentGrid';
 
@@ -27,20 +27,38 @@ export default function HomePage() {
             <span className="text-m3-onSurfaceVariant/80 text-sm ml-0.5 tracking-wide uppercase font-medium text-[10px]">Marketplace</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm text-m3-onSurfaceVariant font-medium">
+          <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <button className="flex items-center justify-between w-full px-4 py-2 bg-m3-surfaceContainerHighest/40 hover:bg-m3-surfaceContainerHighest/80 
+                               border border-white/5 rounded-full text-sm text-m3-onSurfaceVariant transition-all">
+              <span className="flex items-center gap-2"><Search size={14} /> Search documentation...</span>
+              <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/20 text-[10px] font-mono font-medium opacity-70">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </button>
+          </div>
+
+          <nav className="hidden md:flex items-center gap-6 text-sm text-m3-onSurfaceVariant font-medium">
             <Link href="/" className="hover:text-m3-onSurface transition-colors">Browse</Link>
             <Link href="/publish" className="hover:text-m3-onSurface transition-colors">Publish</Link>
+            <div className="w-px h-4 bg-white/10 mx-2" />
+            <div className="flex items-center gap-4">
+              <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-m3-onSurface transition-colors" aria-label="GitHub">
+                <Github size={18} />
+              </a>
+              <button aria-label="Toggle Dark Mode" className="hover:text-m3-onSurface transition-colors">
+                <Moon size={18} />
+              </button>
+            </div>
             <a
               href="https://app.vectra.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative flex items-center gap-2 px-6 py-2.5 bg-m3-surfaceContainerHighest hover:bg-white/10
-                         text-m3-onSurface rounded-full text-sm font-semibold transition-all duration-300
-                         ring-1 ring-white/10"
+              className="group relative flex items-center gap-2 px-5 py-2 bg-m3-onSurface text-m3-surface hover:bg-m3-onSurface/90
+                         rounded-full text-sm font-semibold transition-all duration-300 ml-2"
             >
                <span className="relative z-10 flex items-center gap-2">
                   Launch Studio 
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-300" />
+                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform duration-300" />
                </span>
             </a>
           </nav>
@@ -73,6 +91,19 @@ export default function HomePage() {
             Browse, preview, and drop high-quality React components directly
             onto your canvas. No copy-paste. No setup.
           </p>
+
+          <div className="flex items-center justify-center gap-4 mt-8 w-full max-w-md">
+            <button className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-primary text-m3-onPrimary rounded-xl font-semibold hover:bg-m3-primary/90 transition-colors shadow-sm">
+              Get Started <ArrowRight size={16} />
+            </button>
+            <a href="https://github.com/OpenDesignlabs/project-D" target="_blank" rel="noreferrer" 
+               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-surfaceContainerHigh text-m3-onSurface rounded-xl font-semibold hover:bg-m3-surfaceContainerHighest transition-colors border border-white/5 shadow-sm">
+              <Github size={18} className="opacity-80" /> GitHub
+              <span className="flex items-center gap-1 text-[11px] bg-black/20 px-1.5 py-0.5 rounded-md ml-1 opacity-80 font-mono">
+                <Star size={10} className="fill-current" /> 12k
+              </span>
+            </a>
+          </div>
 
           <div className="flex flex-wrap items-center justify-center gap-6 mt-6">
             {[

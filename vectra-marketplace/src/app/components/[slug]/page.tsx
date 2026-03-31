@@ -2,19 +2,26 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Download, Star, ShieldCheck, Sparkles,
-  Copy, ExternalLink, Package, Tag, Clock
+  ExternalLink, Package, Tag,
 } from 'lucide-react';
 import { getComponentBySlug } from '../../../lib/registry';
 import { PropsTable } from '../../../components/PropsTable';
 import { CopyButton } from '../../../components/ui/CopyButton';
+import { ComponentTabs } from '../../../components/ComponentTabs';
 import type { Metadata } from 'next';
 
+/**
+ * Next.js 15+ — params is now a Promise.
+ * Must be awaited before accessing any property.
+ * See: https://nextjs.org/docs/messages/sync-dynamic-apis
+ */
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const component = await getComponentBySlug(params.slug);
+  const { slug } = await params;
+  const component = await getComponentBySlug(slug);
   if (!component) return { title: 'Not Found — Vectra Marketplace' };
   return {
     title: `${component.label} — Vectra Marketplace`,
@@ -25,42 +32,38 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export const revalidate = 300;
 
 export default async function ComponentDetailPage({ params }: PageProps) {
-  const component = await getComponentBySlug(params.slug);
+  // ← CRITICAL FIX: await params before destructuring (Next.js 15+)
+  const { slug } = await params;
+  const component = await getComponentBySlug(slug);
   if (!component) notFound();
 
   const installSnippet = `// In Vectra Studio → Insert Panel → Marketplace
 // Search: "${component.label}"
-// Or drop directly from the component palette
 
 // Import in your project:
 import { ${component.importMeta.exportName} } from '${component.importMeta.packageName || '@vectra/ui'}';`;
 
-  const usageSnippet = component.previewCode
-    ?? `<${component.importMeta.exportName} />`;
+  const usageSnippet = component.previewCode ?? `<${component.importMeta.exportName} />`;
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-m3-background">
       {/* ── Nav ── */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-surface/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-white/[0.04] bg-m3-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={14} />
-            Back
+          <Link href="/" className="flex items-center gap-1.5 text-sm text-m3-onSurfaceVariant hover:text-m3-onSurface transition-colors">
+            <ArrowLeft size={14} /> Back
           </Link>
-          <span className="text-white/10">/</span>
-          <span className="text-sm text-white/40">{component.category}</span>
-          <span className="text-white/10">/</span>
-          <span className="text-sm text-white/70">{component.label}</span>
+          <span className="text-m3-outlineVariant">/</span>
+          <span className="text-sm text-m3-onSurfaceVariant">{component.category}</span>
+          <span className="text-m3-outlineVariant">/</span>
+          <span className="text-sm text-m3-onSurface">{component.label}</span>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          {/* ── Left: main content ── */}
+          {/* ── Left ── */}
           <div className="lg:col-span-2 flex flex-col gap-8">
 
             {/* Header */}
@@ -69,174 +72,120 @@ import { ${component.importMeta.exportName} } from '${component.importMeta.packa
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     {component.isOfficial && (
-                      <span className="flex items-center gap-1 text-xs px-2 py-0.5
-                                       bg-brand-600/20 text-brand-300 border border-brand-800/40 rounded-full">
+                      <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-m3-primaryContainer text-m3-onPrimaryContainer rounded-full">
                         <ShieldCheck size={10} /> Official
                       </span>
                     )}
                     {component.isVerified && (
-                      <span className="flex items-center gap-1 text-xs px-2 py-0.5
-                                       bg-emerald-900/30 text-emerald-300 border border-emerald-800/30 rounded-full">
+                      <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-m3-secondaryContainer text-m3-onSecondaryContainer rounded-full">
                         <Sparkles size={10} /> Verified
                       </span>
                     )}
-                    <span className="text-xs px-2 py-0.5 bg-surface-3 text-white/40 rounded-full">
+                    <span className="text-xs px-2 py-0.5 bg-m3-surfaceContainerHighest text-m3-onSurfaceVariant rounded-full">
                       v{component.version}
                     </span>
                   </div>
-                  <h1 className="font-display text-4xl text-white">{component.label}</h1>
-                  <p className="text-white/50 mt-1 font-mono text-sm">{component.name}</p>
+                  <h1 className="font-display text-4xl text-m3-onSurface">{component.label}</h1>
+                  <p className="text-m3-onSurfaceVariant mt-1 font-mono text-sm">{component.name}</p>
                 </div>
-
-                <div className="flex items-center gap-3 text-sm text-white/30">
-                  <span className="flex items-center gap-1">
-                    <Download size={13} />
-                    {component.downloads.toLocaleString()}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Star size={13} />
-                    {component.stars}
-                  </span>
+                <div className="flex items-center gap-3 text-sm text-m3-onSurfaceVariant/60">
+                  <span className="flex items-center gap-1"><Download size={13} />{component.downloads.toLocaleString()}</span>
+                  <span className="flex items-center gap-1"><Star size={13} />{component.stars}</span>
                 </div>
               </div>
-
-              <p className="text-white/60 text-base leading-relaxed">{component.description}</p>
-
-              {/* Tags */}
+              <p className="text-m3-onSurfaceVariant leading-relaxed">{component.description}</p>
               <div className="flex flex-wrap gap-1.5">
                 {component.tags.map(tag => (
-                  <span key={tag}
-                    className="flex items-center gap-1 text-xs px-2 py-0.5
-                               bg-surface-2 text-white/40 border border-white/[0.06] rounded-full">
-                    <Tag size={9} />
-                    {tag}
+                  <span key={tag} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-m3-surfaceContainer text-m3-onSurfaceVariant rounded-full">
+                    <Tag size={9} />{tag}
                   </span>
                 ))}
               </div>
             </div>
 
-            {/* Preview area */}
-            <div className="rounded-2xl border border-white/[0.07] overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2.5 bg-surface-2 border-b border-white/[0.06]">
-                <span className="text-xs text-white/30 font-mono">Preview</span>
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-                </div>
-              </div>
-              <div className="min-h-48 bg-grid-pattern bg-grid bg-surface-1 flex items-center justify-center p-8">
-                {component.previewImageUrl ? (
-                  <img
-                    src={component.previewImageUrl}
-                    alt={component.label}
-                    className="max-w-full rounded-xl shadow-2xl"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-3 text-white/20">
-                    <div className="w-16 h-2 bg-white/10 rounded-full" />
-                    <div className="w-24 h-2 bg-white/10 rounded-full" />
-                    <div className="w-10 h-2 bg-white/10 rounded-full" />
-                    <p className="text-xs mt-2">No preview image</p>
-                  </div>
-                )}
-              </div>
+            {/* ── Component Playground ── */}
+            <div className="flex flex-col gap-3 mt-4">
+              <h2 className="text-xl font-bold text-m3-onSurface">Interactive Preview</h2>
+              <p className="text-sm text-m3-onSurfaceVariant/80 leading-relaxed mb-1">
+                This is a live, functional sandbox rendering <code className="font-mono text-xs bg-m3-surfaceContainerHighest px-1.5 py-0.5 rounded text-m3-onSurface">{component.importMeta.exportName}</code> locally. Verify animations and logic before installing.
+              </p>
+              <ComponentTabs sourceCode={component.sourceCode} label={component.label} exportName={component.importMeta.exportName} />
             </div>
 
-            {/* Usage snippet */}
+            <hr className="border-m3-outlineVariant/20 my-2" />
+
+            {/* Usage */}
             <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Usage</h2>
-              <div className="relative rounded-xl border border-white/[0.07] bg-surface-1 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 bg-surface-2 border-b border-white/[0.06]">
-                  <span className="text-xs text-white/30 font-mono">JSX</span>
+              <h2 className="text-xl font-bold text-m3-onSurface">Installation & Usage</h2>
+              <p className="text-sm text-m3-onSurfaceVariant/80 leading-relaxed mb-1">
+                Install the required dependencies, then paste the snippet below into your workflow to start using <code className="font-mono text-xs bg-m3-surfaceContainerHighest px-1.5 py-0.5 rounded text-m3-onSurface">&lt;{component.importMeta.exportName} /&gt;</code>.
+              </p>
+              <div className="relative rounded-xl border border-m3-outlineVariant/30 bg-m3-surfaceContainer overflow-hidden mt-1 shadow-sm">
+                <div className="flex items-center justify-between px-4 py-2 bg-m3-surfaceContainerHigh border-b border-m3-outlineVariant/20">
+                  <span className="text-xs text-m3-onSurfaceVariant font-mono">Terminal & JSX</span>
                   <CopyButton text={usageSnippet} />
                 </div>
-                <pre className="p-4 text-sm font-mono text-white/70 overflow-x-auto leading-relaxed">
+                <pre className="p-5 text-[#d4d4d4] bg-[#1e1e1e] text-sm font-mono overflow-x-auto leading-relaxed">
                   <code>{usageSnippet}</code>
                 </pre>
               </div>
             </div>
 
-            {/* Props table */}
+            <hr className="border-m3-outlineVariant/20 my-2" />
+
+            {/* Props */}
             <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Props</h2>
+              <h2 className="text-xl font-bold text-m3-onSurface">API Reference</h2>
+              <p className="text-sm text-m3-onSurfaceVariant/80 leading-relaxed mb-1">
+                Below is the standard properties interface for configuring the <code className="font-mono text-xs bg-m3-surfaceContainerHighest px-1.5 py-0.5 rounded text-m3-onSurface">{component.importMeta.exportName}</code>.
+              </p>
               <PropsTable props={component.propsSchema} />
             </div>
 
-            {/* Source code */}
-            <div className="flex flex-col gap-3">
-              <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">Source</h2>
-              <div className="relative rounded-xl border border-white/[0.07] bg-surface-1 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 bg-surface-2 border-b border-white/[0.06]">
-                  <span className="text-xs text-white/30 font-mono">{component.importMeta.exportName}.tsx</span>
-                  <CopyButton text={component.sourceCode} />
-                </div>
-                <pre className="p-4 text-sm font-mono text-white/60 overflow-x-auto leading-relaxed max-h-96">
-                  <code>{component.sourceCode}</code>
-                </pre>
-              </div>
-            </div>
 
           </div>
 
-          {/* ── Right: sidebar ── */}
+          {/* ── Right sidebar ── */}
           <div className="flex flex-col gap-4">
 
-            {/* Install in Studio CTA */}
-            <div className="rounded-2xl border border-brand-800/40 bg-brand-950/40 p-5 flex flex-col gap-4">
+            <div className="rounded-2xl border border-m3-primary/30 bg-m3-primaryContainer/10 p-5 flex flex-col gap-4">
               <div>
-                <h3 className="font-semibold text-white text-sm">Use in Studio</h3>
-                <p className="text-xs text-white/40 mt-1 leading-relaxed">
-                  Open Vectra Studio, go to Insert → Marketplace, and search for this component.
+                <h3 className="font-semibold text-m3-onSurface text-sm">Use in Studio</h3>
+                <p className="text-xs text-m3-onSurfaceVariant mt-2 leading-relaxed">
+                  Open <strong className="text-m3-onSurface">Vectra Studio</strong> → <code className="font-mono text-[10px] bg-m3-surface px-1 py-0.5 rounded text-m3-onSurface">Marketplace panel</code> → click <strong className="text-m3-onSurface">Add</strong> on this component.
                 </p>
               </div>
-              <a
-                href="https://app.vectra.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-brand-600
-                           hover:bg-brand-500 text-white rounded-xl text-sm font-medium transition-colors"
-              >
+              <a href="https://app.vectra.dev" target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-m3-primary hover:opacity-90 text-m3-onPrimary rounded-xl text-sm font-medium transition-opacity">
                 Open Studio <ExternalLink size={13} />
               </a>
             </div>
 
-            {/* Install snippet */}
-            <div className="rounded-2xl border border-white/[0.07] bg-surface-1 p-5 flex flex-col gap-3">
-              <h3 className="font-semibold text-white text-sm flex items-center gap-2">
-                <Package size={13} className="text-white/40" />
-                Install manually
+            <div className="rounded-2xl border border-m3-outlineVariant/30 bg-m3-surfaceContainer p-5 flex flex-col gap-3">
+              <h3 className="font-semibold text-m3-onSurface text-sm flex items-center gap-2">
+                <Package size={13} className="text-m3-onSurfaceVariant" /> Install manually
               </h3>
-              <div className="relative">
-                <pre className="text-xs font-mono text-white/50 leading-relaxed bg-surface-2
-                                rounded-lg p-3 overflow-x-auto">
+              <div className="relative mt-1">
+                <pre className="text-[11px] font-mono text-m3-onSurfaceVariant/80 leading-relaxed bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto shadow-inner">
                   <code>{installSnippet}</code>
                 </pre>
-                <div className="absolute top-2 right-2">
-                  <CopyButton text={installSnippet} size="sm" />
-                </div>
+                <div className="absolute top-2 right-2"><CopyButton text={installSnippet} size="sm" /></div>
               </div>
             </div>
 
-            {/* Meta */}
-            <div className="rounded-2xl border border-white/[0.07] bg-surface-1 p-5 flex flex-col gap-3">
-              <h3 className="font-semibold text-white text-sm">Details</h3>
+            <div className="rounded-2xl border border-m3-outlineVariant/30 bg-m3-surfaceContainer p-5 flex flex-col gap-3">
+              <h3 className="font-semibold text-m3-onSurface text-sm">Details</h3>
               <dl className="flex flex-col gap-2.5 text-xs">
                 {[
                   { label: 'Category',    value: component.category },
                   { label: 'Version',     value: `v${component.version}` },
                   { label: 'Published by', value: component.publishedBy },
-                  {
-                    label: 'Added',
-                    value: new Date(component.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric', month: 'short', day: 'numeric'
-                    })
-                  },
+                  { label: 'Added',       value: new Date(component.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
                   { label: 'Downloads',   value: component.downloads.toLocaleString() },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between">
-                    <dt className="text-white/30">{label}</dt>
-                    <dd className="text-white/70 font-mono">{value}</dd>
+                    <dt className="text-m3-onSurfaceVariant/60">{label}</dt>
+                    <dd className="text-m3-onSurface font-mono">{value}</dd>
                   </div>
                 ))}
               </dl>

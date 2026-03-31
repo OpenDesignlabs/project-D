@@ -103,7 +103,7 @@ marketplaceRoute.get('/components', async (c) => {
     if (error) throw error;
 
     const mapper = isStudio ? rowToStudioEntry : rowToEntry;
-    const components = (data ?? []).map(mapper);
+    const components = (data as unknown as DbRow[] ?? []).map(mapper);
 
     // Studio just wants a flat array
     if (isStudio) {
@@ -140,8 +140,12 @@ marketplaceRoute.get('/components/:slug', async (c) => {
 
     if (error || !data) return c.json({ error: 'Component not found' }, 404);
 
-    // Fire-and-forget download increment
-    supabase.rpc('increment_downloads', { component_id: (data as DbRow)['id'] as string }).catch(() => {});
+    // Fire-and-forget download increment.
+    // supabase.rpc() returns a PromiseLike (PostgrestSingleResponse), NOT a native Promise.
+    // .catch() doesn't exist on it — wrap in Promise.resolve() to get a real Promise.
+    Promise.resolve(
+      supabase.rpc('increment_downloads', { component_id: (data as DbRow)['id'] as string })
+    ).catch(() => {});
 
     return c.json(rowToEntry(data as DbRow), 200, {
       'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
