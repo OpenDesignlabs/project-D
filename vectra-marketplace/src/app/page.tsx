@@ -1,16 +1,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Boxes, ArrowRight, Sparkles, ShieldCheck, Zap, Github, Search, Moon, Star } from 'lucide-react';
-import { getComponents } from '../lib/registry';
-import { ComponentGrid } from '../components/ComponentGrid';
-
-// Revalidate every 60 seconds — fresh enough, cheap enough
-export const revalidate = 60;
-
-async function ComponentsData() {
-  const { components, total } = await getComponents({ limit: 100, sort: 'official' });
-  return <ComponentGrid initialComponents={components} totalCount={total} />;
-}
+import { ThemeToggle } from '../components/ThemeToggle';
+import { Boxes, ArrowRight, Sparkles, ShieldCheck, Zap, Github, Search, Moon, Book, Layers, Blocks, Code2 } from 'lucide-react';
 
 export default function HomePage() {
   return (
@@ -45,9 +36,8 @@ export default function HomePage() {
               <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-m3-onSurface transition-colors" aria-label="GitHub">
                 <Github size={18} />
               </a>
-              <button aria-label="Toggle Dark Mode" className="hover:text-m3-onSurface transition-colors">
-                <Moon size={18} />
-              </button>
+              {/* Theme Toggle Component */}
+              <ThemeToggle />
             </div>
             <a
               href="https://app.vectra.dev"
@@ -93,15 +83,12 @@ export default function HomePage() {
           </p>
 
           <div className="flex items-center justify-center gap-4 mt-8 w-full max-w-md">
-            <button className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-primary text-m3-onPrimary rounded-xl font-semibold hover:bg-m3-primary/90 transition-colors shadow-sm">
-              Get Started <ArrowRight size={16} />
-            </button>
-            <a href="https://github.com/OpenDesignlabs/project-D" target="_blank" rel="noreferrer" 
+            <Link href={"/components" as any} className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-primary text-m3-onPrimary rounded-xl font-semibold hover:bg-m3-primary/90 transition-colors shadow-sm">
+              Explore <ArrowRight size={16} />
+            </Link>
+            <a href="https://vectra-docs-pi.vercel.app/" target="_blank" rel="noreferrer" 
                className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-surfaceContainerHigh text-m3-onSurface rounded-xl font-semibold hover:bg-m3-surfaceContainerHighest transition-colors border border-white/5 shadow-sm">
-              <Github size={18} className="opacity-80" /> GitHub
-              <span className="flex items-center gap-1 text-[11px] bg-black/20 px-1.5 py-0.5 rounded-md ml-1 opacity-80 font-mono">
-                <Star size={10} className="fill-current" /> 12k
-              </span>
+              <Book size={18} className="opacity-80" /> Read Docs
             </a>
           </div>
 
@@ -120,12 +107,70 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Main catalog ── */}
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 sm:px-6 py-12 md:py-16">
-        <Suspense fallback={<CatalogSkeleton />}>
-          <ComponentsData />
-        </Suspense>
-      </main>
+      {/* ── Features / Ecosystem ── */}
+      <section className="relative w-full max-w-[1400px] mx-auto px-6 py-24 z-10 flex-1">
+        <div className="text-center mb-16">
+          <h2 className="font-display text-4xl md:text-5xl font-semibold tracking-tight text-m3-onSurface mb-4">
+            A native ecosystem
+          </h2>
+          <p className="text-m3-onSurfaceVariant text-lg leading-relaxed max-w-2xl mx-auto">
+            Vectra Marketplace seamlessly integrates with your studio canvas. 
+            Everything is built native for modern React and Tailwind CSS.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1 */}
+          <div className="bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] p-8 rounded-[32px] flex flex-col items-start hover:bg-m3-surfaceContainerLowest/60 transition-colors shadow-sm">
+            <div className="w-14 h-14 rounded-[20px] bg-m3-primary/10 flex items-center justify-center text-m3-primary mb-6 ring-1 ring-m3-primary/20 shadow-inner">
+              <Layers size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-m3-onSurface mb-3">Drag & Drop</h3>
+            <p className="text-m3-onSurfaceVariant text-sm leading-relaxed">
+              Pull components directly into the local visual builder canvas. Fully responsive, completely fluid.
+            </p>
+          </div>
+
+          {/* Card 2 */}
+          <div className="bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] p-8 rounded-[32px] flex flex-col items-start hover:bg-m3-surfaceContainerLowest/60 transition-colors shadow-sm">
+            <div className="w-14 h-14 rounded-[20px] bg-m3-secondaryContainer/50 flex items-center justify-center text-m3-onSecondaryContainer mb-6 ring-1 ring-white/10 shadow-inner">
+              <Blocks size={28} strokeWidth={1.5} />
+            </div>
+            <h3 className="text-xl font-bold text-m3-onSurface mb-3">100% Modifiable</h3>
+            <p className="text-m3-onSurfaceVariant text-sm leading-relaxed">
+              Every component's code is instantly accessible. Edit states, props, and Tailwind classes directly.
+            </p>
+          </div>
+
+          {/* Card 3 */}
+          <div className="bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] p-8 rounded-[32px] flex flex-col items-start hover:bg-m3-surfaceContainerLowest/60 transition-colors shadow-sm">
+            <div className="w-14 h-14 rounded-[20px] bg-m3-tertiaryContainer/50 flex items-center justify-center text-m3-onTertiaryContainer mb-6 ring-1 ring-white/10 shadow-inner">
+              <Code2 size={28} />
+            </div>
+            <h3 className="text-xl font-bold text-m3-onSurface mb-3">Export to Code</h3>
+            <p className="text-m3-onSurfaceVariant text-sm leading-relaxed">
+              Generated underlying code is pure React with Tailwind v4. No locked-in abstractions or weird wrappers.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 bg-m3-surfaceContainerHighest/30 backdrop-blur-3xl border border-white/[0.05] rounded-[40px] p-10 md:p-12 flex flex-col md:flex-row items-center justify-between gap-10 shadow-xl relative overflow-hidden">
+          {/* Subtle glow */}
+          <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-64 h-64 bg-m3-primary/10 blur-[80px] rounded-full pointer-events-none" />
+          
+          <div className="flex-1 relative z-10">
+            <h3 className="text-3xl font-display font-semibold text-m3-onSurface mb-3">Sync with Vectra Studio</h3>
+            <p className="text-m3-onSurfaceVariant text-base md:text-lg leading-relaxed max-w-xl">
+              Publish your own components to the marketplace and have them instantly available across all your team's Studio workspaces.
+            </p>
+          </div>
+          <div className="w-full md:w-auto relative z-10">
+             <Link href="/publish" className="inline-flex w-full md:w-auto items-center justify-center gap-2 px-8 py-4 bg-m3-onSurface text-m3-surface rounded-[24px] font-bold hover:bg-m3-onSurface/90 transition-all shadow-xl shadow-m3-onSurface/10">
+               Start Publishing Now <ArrowRight size={16} />
+             </Link>
+          </div>
+        </div>
+      </section>
 
       {/* ── Footer ── */}
       <footer className="bg-m3-background border-t border-white/[0.04] py-12 mt-auto">
@@ -143,30 +188,4 @@ export default function HomePage() {
   );
 }
 
-// ── Loading skeleton ──────────────────────────────────────────────────────────
-function CatalogSkeleton() {
-  return (
-    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 w-full">
-      <aside className="w-full lg:w-64 flex-shrink-0">
-         <div className="flex flex-col gap-2">
-            {Array.from({ length: 9 }).map((_, i) => (
-               <div key={i} className={`h-11 rounded-full animate-pulse bg-m3-surfaceContainerHigh ${i === 0 ? 'w-3/4 mb-4' : 'w-full'}`} />
-            ))}
-         </div>
-      </aside>
-      <div className="flex-1 flex flex-col gap-8">
-         {/* Search bar skeleton */}
-         <div className="flex gap-4">
-            <div className="flex-1 h-14 bg-m3-surfaceContainerHigh rounded-full animate-pulse ring-1 ring-white/[0.04]" />
-            <div className="w-40 h-14 bg-m3-surfaceContainerHigh rounded-full animate-pulse ring-1 ring-white/[0.04]" />
-         </div>
-         {/* Grid skeleton */}
-         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="h-80 bg-m3-surfaceContainer rounded-[24px] border border-white/[0.04] animate-pulse" />
-            ))}
-         </div>
-      </div>
-    </div>
-  );
-}
+

@@ -7,6 +7,68 @@
     --font-display: 'DM Serif Display', serif;
     --font-body: 'DM Sans', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+
+    /* LIGHT THEME (Yellowish Creamy White) */
+    --m3-background: 255 248 240;
+    --m3-onBackground: 34 31 29;
+    --m3-primary: 92 85 164;
+    --m3-onPrimary: 255 255 255;
+    --m3-primaryContainer: 230 224 255;
+    --m3-onPrimaryContainer: 25 14 95;
+    --m3-secondary: 94 92 113;
+    --m3-onSecondary: 255 255 255;
+    --m3-secondaryContainer: 228 223 248;
+    --m3-onSecondaryContainer: 27 25 43;
+    --m3-tertiary: 125 82 96;
+    --m3-onTertiary: 255 255 255;
+    --m3-tertiaryContainer: 255 217 227;
+    --m3-onTertiaryContainer: 49 17 29;
+    --m3-error: 186 26 26;
+    --m3-onError: 255 255 255;
+    --m3-errorContainer: 255 218 214;
+    --m3-onErrorContainer: 65 0 2;
+    --m3-surface: 255 248 240;
+    --m3-onSurface: 28 27 31;
+    --m3-onSurfaceVariant: 73 69 79;
+    --m3-surfaceContainerLowest: 255 255 255;
+    --m3-surfaceContainerLow: 253 246 238;
+    --m3-surfaceContainer: 247 239 230;
+    --m3-surfaceContainerHigh: 241 232 224;
+    --m3-surfaceContainerHighest: 234 222 56;
+    --m3-outline: 121 116 126;
+    --m3-outlineVariant: 202 196 208;
+  }
+
+  .dark {
+    /* DARK THEME */
+    --m3-background: 15 15 19;
+    --m3-onBackground: 228 225 233;
+    --m3-primary: 189 185 255;
+    --m3-onPrimary: 40 1 138;
+    --m3-primaryContainer: 63 0 159;
+    --m3-onPrimaryContainer: 227 223 255;
+    --m3-secondary: 192 198 221;
+    --m3-onSecondary: 42 48 66;
+    --m3-secondaryContainer: 74 68 88;
+    --m3-onSecondaryContainer: 232 222 248;
+    --m3-tertiary: 239 184 200;
+    --m3-onTertiary: 68 38 63;
+    --m3-tertiaryContainer: 93 60 87;
+    --m3-onTertiaryContainer: 255 215 243;
+    --m3-error: 255 180 171;
+    --m3-onError: 105 0 5;
+    --m3-errorContainer: 147 0 10;
+    --m3-onErrorContainer: 255 218 214;
+    --m3-surface: 15 15 19;
+    --m3-onSurface: 230 225 233;
+    --m3-onSurfaceVariant: 202 180 217;
+    --m3-surfaceContainerLowest: 13 13 16;
+    --m3-surfaceContainerLow: 26 27 33;
+    --m3-surfaceContainer: 28 27 33;
+    --m3-surfaceContainerHigh: 38 37 43;
+    --m3-surfaceContainerHighest: 49 47 56;
+    --m3-outline: 149 141 165;
+    --m3-outlineVariant: 73 69 79;
   }
 
   * {

@@ -9,6 +9,7 @@ import { PropsTable } from '../../../components/PropsTable';
 import { CopyButton } from '../../../components/ui/CopyButton';
 import { ComponentTabs } from '../../../components/ComponentTabs';
 import type { Metadata } from 'next';
+import { transform } from '@swc/core';
 
 /**
  * Next.js 15+ — params is now a Promise.
@@ -44,6 +45,20 @@ export default async function ComponentDetailPage({ params }: PageProps) {
 import { ${component.importMeta.exportName} } from '${component.importMeta.packageName || '@vectra/ui'}';`;
 
   const usageSnippet = component.previewCode ?? `<${component.importMeta.exportName} />`;
+
+  // --- SERVER SIDE COMPILATION WITH SWC (Omit 'export default' and jsx) ---
+  const swcCodeResult = await transform(component.sourceCode, {
+    jsc: {
+      parser: { syntax: 'typescript', tsx: true },
+      transform: { react: { runtime: 'classic' } },
+      target: 'es2015',
+    },
+    isModule: true
+  });
+  
+  // SWC might leave 'export default' inside. The preview iframe needs to extract it,
+  // or we can just pass the compiled JS bundle down to the client.
+  const compiledCode = swcCodeResult.code;
 
   return (
     <div className="min-h-screen bg-m3-background">
@@ -109,7 +124,7 @@ import { ${component.importMeta.exportName} } from '${component.importMeta.packa
               <p className="text-sm text-m3-onSurfaceVariant/80 leading-relaxed mb-1">
                 This is a live, functional sandbox rendering <code className="font-mono text-xs bg-m3-surfaceContainerHighest px-1.5 py-0.5 rounded text-m3-onSurface">{component.importMeta.exportName}</code> locally. Verify animations and logic before installing.
               </p>
-              <ComponentTabs sourceCode={component.sourceCode} label={component.label} exportName={component.importMeta.exportName} />
+              <ComponentTabs sourceCode={component.sourceCode} compiledCode={compiledCode} label={component.label} exportName={component.importMeta.exportName} />
             </div>
 
             <hr className="border-m3-outlineVariant/20 my-2" />

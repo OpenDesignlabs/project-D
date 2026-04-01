@@ -18,46 +18,46 @@ export default {
         // Material 3 Dark Theme — audit-aligned palette (2026-03-28)
         m3: {
           // Backgrounds
-          background:              '#0f0f13',
-          onBackground:            '#e4e1e9',
+          background: 'rgb(var(--m3-background) / <alpha-value>)',
+          onBackground: 'rgb(var(--m3-onBackground) / <alpha-value>)',
 
           // Primary (brand indigo)
-          primary:                 '#bdb9ff',
-          onPrimary:               '#28018a',
-          primaryContainer:        '#3f009f',
-          onPrimaryContainer:      '#e3dfff',
+          primary: 'rgb(var(--m3-primary) / <alpha-value>)',
+          onPrimary: 'rgb(var(--m3-onPrimary) / <alpha-value>)',
+          primaryContainer: 'rgb(var(--m3-primaryContainer) / <alpha-value>)',
+          onPrimaryContainer: 'rgb(var(--m3-onPrimaryContainer) / <alpha-value>)',
 
           // Secondary
-          secondary:               '#C0C6DD',
-          onSecondary:             '#2A3042',
-          secondaryContainer:      '#4a4458',
-          onSecondaryContainer:    '#e8def8',
+          secondary: 'rgb(var(--m3-secondary) / <alpha-value>)',
+          onSecondary: 'rgb(var(--m3-onSecondary) / <alpha-value>)',
+          secondaryContainer: 'rgb(var(--m3-secondaryContainer) / <alpha-value>)',
+          onSecondaryContainer: 'rgb(var(--m3-onSecondaryContainer) / <alpha-value>)',
 
           // Tertiary
-          tertiary:                '#efb8c8',
-          onTertiary:              '#44263F',
-          tertiaryContainer:       '#5D3C57',
-          onTertiaryContainer:     '#FFD7F3',
+          tertiary: 'rgb(var(--m3-tertiary) / <alpha-value>)',
+          onTertiary: 'rgb(var(--m3-onTertiary) / <alpha-value>)',
+          tertiaryContainer: 'rgb(var(--m3-tertiaryContainer) / <alpha-value>)',
+          onTertiaryContainer: 'rgb(var(--m3-onTertiaryContainer) / <alpha-value>)',
 
           // Error
-          error:                   '#FFB4AB',
-          onError:                 '#690005',
-          errorContainer:          '#93000A',
-          onErrorContainer:        '#FFDAD6',
+          error: 'rgb(var(--m3-error) / <alpha-value>)',
+          onError: 'rgb(var(--m3-onError) / <alpha-value>)',
+          errorContainer: 'rgb(var(--m3-errorContainer) / <alpha-value>)',
+          onErrorContainer: 'rgb(var(--m3-onErrorContainer) / <alpha-value>)',
 
-          // Surface scale (darkest → lightest)
-          surface:                 '#0f0f13',
-          onSurface:               '#e6e1e9',
-          onSurfaceVariant:        '#cab4d9',
-          surfaceContainerLowest:  '#0d0d10',
-          surfaceContainerLow:     '#1A1B21',
-          surfaceContainer:        '#1c1b21',
-          surfaceContainerHigh:    '#26252b',
-          surfaceContainerHighest: '#312f38',
+          // Surface scale
+          surface: 'rgb(var(--m3-surface) / <alpha-value>)',
+          onSurface: 'rgb(var(--m3-onSurface) / <alpha-value>)',
+          onSurfaceVariant: 'rgb(var(--m3-onSurfaceVariant) / <alpha-value>)',
+          surfaceContainerLowest: 'rgb(var(--m3-surfaceContainerLowest) / <alpha-value>)',
+          surfaceContainerLow: 'rgb(var(--m3-surfaceContainerLow) / <alpha-value>)',
+          surfaceContainer: 'rgb(var(--m3-surfaceContainer) / <alpha-value>)',
+          surfaceContainerHigh: 'rgb(var(--m3-surfaceContainerHigh) / <alpha-value>)',
+          surfaceContainerHighest: 'rgb(var(--m3-surfaceContainerHighest) / <alpha-value>)',
 
           // Outline
-          outline:                 '#958da5',
-          outlineVariant:          '#49454f',
+          outline: 'rgb(var(--m3-outline) / <alpha-value>)',
+          outlineVariant: 'rgb(var(--m3-outlineVariant) / <alpha-value>)',
         },
         // brand.* kept — ComponentCard CATEGORY_COLORS uses raw Tailwind, not these
         brand: {

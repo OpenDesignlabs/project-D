@@ -10,16 +10,17 @@
 // ─── COMPONENT CATEGORIES ────────────────────────────────────────────────────
 
 export type ComponentCategory =
-  | 'basic'
-  | 'layout'
-  | 'forms'
-  | 'media'
-  | 'sections'
+  | 'hero'
   | 'navigation'
-  | 'marketing'
-  | 'data'
-  | 'feedback'
-  | 'ecommerce';
+  | 'footer'
+  | 'pricing'
+  | 'feature'
+  | 'cta'
+  | 'testimonials'
+  | 'forms'
+  | 'stats'
+  | 'layout'
+  | 'basic';
 
 // ─── PROP SCHEMA ─────────────────────────────────────────────────────────────
 

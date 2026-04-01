@@ -6,17 +6,18 @@ import { ComponentCard } from './ComponentCard';
 import type { ComponentRegistryEntry, ComponentCategory } from '../types';
 
 const CATEGORIES: { value: ComponentCategory | 'all'; label: string }[] = [
-  { value: 'all',        label: 'All Components' },
-  { value: 'basic',      label: 'Basic' },
-  { value: 'layout',     label: 'Layout' },
-  { value: 'forms',      label: 'Forms' },
-  { value: 'media',      label: 'Media' },
-  { value: 'sections',   label: 'Sections' },
-  { value: 'navigation', label: 'Navigation' },
-  { value: 'marketing',  label: 'Marketing' },
-  { value: 'data',       label: 'Data' },
-  { value: 'feedback',   label: 'Feedback' },
-  { value: 'ecommerce',  label: 'Ecommerce' },
+  { value: 'all',         label: 'All Components' },
+  { value: 'hero',        label: 'Hero Sections' },
+  { value: 'navigation',  label: 'Navigation' },
+  { value: 'feature',     label: 'Features' },
+  { value: 'pricing',     label: 'Pricing' },
+  { value: 'footer',      label: 'Footers' },
+  { value: 'cta',         label: 'Call to Actions' },
+  { value: 'testimonials',label: 'Testimonials' },
+  { value: 'forms',       label: 'Forms' },
+  { value: 'stats',       label: 'Stats' },
+  { value: 'layout',      label: 'Layout' },
+  { value: 'basic',       label: 'Basic' },
 ];
 
 const SORTS = [
@@ -71,9 +72,9 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
     <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 w-full">
       {/* ── Sidebar (Categories) ── */}
       <aside className="w-full lg:w-64 flex-shrink-0">
-        <nav aria-label="Component categories" className="sticky top-28 flex flex-col gap-1.5 p-1 max-h-[calc(100vh-140px)] overflow-y-auto 
-                        scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent pr-2">
-          <div className="flex items-center gap-2 px-4 mb-3 text-m3-onSurfaceVariant font-bold text-xs tracking-widest uppercase">
+        <nav aria-label="Component categories" className="sticky top-28 flex flex-col gap-1.5 p-4 bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] rounded-[32px] shadow-lg max-h-[calc(100vh-140px)] overflow-y-auto 
+                        scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <div className="flex items-center gap-2 px-3 mb-2 text-m3-onSurfaceVariant font-bold text-xs tracking-widest uppercase opacity-80">
             <Compass size={14} className="text-m3-primary" aria-hidden="true" />
             Explore
           </div>
@@ -84,12 +85,12 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
               onClick={() => startTransition(() => setCategory(cat.value as ComponentCategory | 'all'))}
               className={`flex items-center justify-between w-full px-4 py-3 rounded-full text-sm font-semibold transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary
                 ${category === cat.value
-                  ? 'bg-m3-secondaryContainer text-m3-onSecondaryContainer shadow-sm ring-1 ring-white/[0.05]'
-                  : 'bg-transparent text-m3-onSurfaceVariant hover:bg-white/[0.03] hover:text-m3-onSurface'
+                  ? 'bg-m3-primary/15 text-m3-primary shadow-sm ring-1 ring-m3-primary/30'
+                  : 'bg-transparent text-m3-onSurfaceVariant hover:bg-white/[0.04] hover:text-m3-onSurface'
                 }`}
             >
               <span className="truncate">{cat.label}</span>
-              {category === cat.value && <ChevronRight size={14} className="opacity-70 flex-shrink-0" aria-hidden="true" />}
+              {category === cat.value && <ChevronRight size={14} className="opacity-80 flex-shrink-0" aria-hidden="true" />}
             </button>
           ))}
         </nav>
@@ -108,10 +109,10 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
               value={search}
               onChange={e => startTransition(() => setSearch(e.target.value))}
               placeholder="Search components or tags..."
-              className="w-full bg-m3-surfaceContainerHigh/40 backdrop-blur-xl rounded-full pl-14 pr-12 py-3.5
+              className="w-full bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl rounded-[24px] pl-14 pr-12 py-4
                          text-base text-m3-onSurface placeholder:text-m3-onSurfaceVariant/60
-                         focus:outline-none focus:ring-2 focus:ring-m3-primary focus:bg-m3-surfaceContainerHighest/60
-                         transition-all shadow-sm ring-1 ring-white/[0.05]"
+                         focus:outline-none focus:ring-2 focus:ring-m3-primary focus:bg-m3-surfaceContainerLowest/60
+                         transition-all shadow-lg ring-1 ring-white/[0.05]"
             />
             {search && (
               <button
@@ -128,20 +129,20 @@ export function ComponentGrid({ initialComponents, totalCount }: ComponentGridPr
           {/* Sort */}
           <div className="flex items-center gap-3">
             <div className="relative group">
-              <SlidersHorizontal size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant pointer-events-none group-hover:text-m3-onSurface transition-colors" aria-hidden="true" />
+              <SlidersHorizontal size={18} className="absolute left-6 top-1/2 -translate-y-1/2 text-m3-onSurfaceVariant pointer-events-none group-hover:text-m3-onSurface transition-colors" aria-hidden="true" />
               <select
                 aria-label="Sort components"
                 value={sort}
                 onChange={e => setSort(e.target.value)}
-                className="appearance-none bg-m3-surfaceContainerHigh/40 backdrop-blur-xl rounded-full pl-12 pr-10 py-3.5 text-sm text-m3-onSurface font-semibold
-                           focus:outline-none focus:ring-2 focus:ring-m3-primary cursor-pointer shadow-sm ring-1 ring-white/[0.05]
-                           hover:bg-m3-surfaceContainerHighest/60 transition-all min-w-[160px]"
+                className="appearance-none bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl rounded-[24px] pl-14 pr-12 py-4 text-sm text-m3-onSurface font-semibold
+                           focus:outline-none focus:ring-2 focus:ring-m3-primary cursor-pointer shadow-lg ring-1 ring-white/[0.05]
+                           hover:bg-m3-surfaceContainerLowest/60 transition-all min-w-[180px]"
               >
                 {SORTS.map(s => (
-                  <option key={s.value} value={s.value} className="bg-m3-surfaceContainerHigh">{s.label}</option>
+                  <option key={s.value} value={s.value} className="bg-m3-surfaceContainerHighest">{s.label}</option>
                 ))}
               </select>
-              <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none">
                 <ChevronRight size={14} className="text-m3-onSurfaceVariant rotate-90" />
               </div>
             </div>

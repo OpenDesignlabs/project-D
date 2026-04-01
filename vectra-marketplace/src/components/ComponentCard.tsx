@@ -9,16 +9,17 @@ interface ComponentCardProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  basic:      'bg-slate-800/80 text-slate-300',
-  layout:     'bg-blue-900/60 text-blue-300',
-  forms:      'bg-violet-900/60 text-violet-300',
-  media:      'bg-amber-900/60 text-amber-300',
-  sections:   'bg-emerald-900/60 text-emerald-300',
-  navigation: 'bg-cyan-900/60 text-cyan-300',
-  marketing:  'bg-pink-900/60 text-pink-300',
-  data:       'bg-orange-900/60 text-orange-300',
-  feedback:   'bg-teal-900/60 text-teal-300',
-  ecommerce:  'bg-rose-900/60 text-rose-300',
+  hero:         'bg-purple-900/60 text-purple-300 ring-1 ring-purple-500/20',
+  navigation:   'bg-cyan-900/60 text-cyan-300 ring-1 ring-cyan-500/20',
+  footer:       'bg-emerald-900/60 text-emerald-300 ring-1 ring-emerald-500/20',
+  pricing:      'bg-amber-900/60 text-amber-300 ring-1 ring-amber-500/20',
+  feature:      'bg-blue-900/60 text-blue-300 ring-1 ring-blue-500/20',
+  cta:          'bg-rose-900/60 text-rose-300 ring-1 ring-rose-500/20',
+  testimonials: 'bg-teal-900/60 text-teal-300 ring-1 ring-teal-500/20',
+  forms:        'bg-violet-900/60 text-violet-300 ring-1 ring-violet-500/20',
+  stats:        'bg-orange-900/60 text-orange-300 ring-1 ring-orange-500/20',
+  layout:       'bg-slate-700/60 text-slate-200 ring-1 ring-slate-500/20',
+  basic:        'bg-slate-800/80 text-slate-300 ring-1 ring-slate-500/20',
 };
 
 export function ComponentCard({ component }: ComponentCardProps) {
@@ -28,14 +29,14 @@ export function ComponentCard({ component }: ComponentCardProps) {
     <Link
       href={`/components/${component.slug}`}
       aria-label={`View component: ${component.label}`}
-      className="group relative flex flex-col bg-m3-surfaceContainer border border-m3-outlineVariant/30 rounded-3xl overflow-hidden
-                 transition-all duration-300 ease-out hover:-translate-y-1
-                 shadow-sm hover:shadow-md hover:bg-m3-surfaceContainerHigh
-                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-m3-surfaceContainer"
+      className="group relative flex flex-col bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] rounded-[32px] overflow-hidden
+                 transition-all duration-500 ease-out hover:-translate-y-2
+                 shadow-lg hover:shadow-2xl hover:shadow-m3-primary/10 hover:bg-m3-surfaceContainerLowest/70
+                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-m3-background"
     >
 
       {/* Preview area */}
-      <div className="relative h-56 bg-m3-surfaceContainerHigh border-b border-m3-outlineVariant/30 overflow-hidden
+      <div className="relative h-56 bg-transparent border-b border-white/[0.05] overflow-hidden
                       bg-grid-pattern bg-grid flex items-center justify-center p-6">
         {component.previewImageUrl ? (
           <img
@@ -101,7 +102,7 @@ export function ComponentCard({ component }: ComponentCardProps) {
         )}
 
         {/* Footer stats */}
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-m3-outlineVariant/20">
+        <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/[0.05]">
           <div className="flex items-center gap-4 text-m3-onSurfaceVariant/80 font-medium">
             <span className="flex items-center gap-1.5 text-[11px] tracking-wide" aria-label={`${component.downloads} downloads`}>
               <Download size={12} className="text-m3-outline/60" aria-hidden="true" />

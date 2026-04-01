@@ -6,8 +6,8 @@ import { ArrowLeft, Upload, CheckCircle, AlertCircle, Boxes } from 'lucide-react
 import type { PublishComponentPayload, ComponentCategory } from '../../types';
 
 const CATEGORIES: ComponentCategory[] = [
-  'basic','layout','forms','media','sections',
-  'navigation','marketing','data','feedback','ecommerce'
+  'hero', 'navigation', 'footer', 'pricing', 'feature', 
+  'cta', 'testimonials', 'forms', 'stats', 'layout', 'basic'
 ];
 
 type FormState = 'idle' | 'submitting' | 'success' | 'error';

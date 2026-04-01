@@ -185,7 +185,7 @@ export default function EcommerceHeader() {
   {
     name: 'vectra:CenteredHero', version: '1.0.0', slug: 'centered-hero',
     label: 'Centered Hero', description: 'Full-width dark hero with gradient text, glow effect, and centered CTA.',
-    category: 'sections', tags: ['hero', 'centered', 'dark', 'gradient', 'glow'],
+    category: 'hero', tags: ['hero', 'centered', 'dark', 'gradient', 'glow'],
     importMeta: { packageName: '', exportName: 'CenteredHero', isDefaultExport: true },
     sourceCode: `import React from 'react';
 export default function CenteredHero() {
@@ -214,7 +214,7 @@ export default function CenteredHero() {
   {
     name: 'vectra:SplitHero', version: '1.0.0', slug: 'split-hero',
     label: 'Split Hero', description: 'Two-column hero with animated badge, trust signals, and app preview mockup.',
-    category: 'sections', tags: ['hero', 'split', 'two-column', 'saas'],
+    category: 'hero', tags: ['hero', 'split', 'two-column', 'saas'],
     importMeta: { packageName: '', exportName: 'SplitHero', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -266,7 +266,7 @@ export default function SplitHero() {
   {
     name: 'vectra:BentoHero', version: '1.0.0', slug: 'bento-hero',
     label: 'Bento Hero', description: 'Bento-grid hero layout with feature cards and social proof.',
-    category: 'sections', tags: ['hero', 'bento', 'grid', 'cards'],
+    category: 'hero', tags: ['hero', 'bento', 'grid', 'cards'],
     importMeta: { packageName: '', exportName: 'BentoHero', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { Star, Zap } from 'lucide-react';
@@ -299,7 +299,7 @@ export default function BentoHero() {
   {
     name: 'vectra:DevToolHero', version: '1.0.0', slug: 'dev-tool-hero',
     label: 'Dev Tool Hero', description: 'Developer-focused dark hero with animated terminal code block.',
-    category: 'sections', tags: ['hero', 'developer', 'terminal', 'cli', 'dark'],
+    category: 'hero', tags: ['hero', 'developer', 'terminal', 'cli', 'dark'],
     importMeta: { packageName: '', exportName: 'DevToolHero', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { Terminal, Copy } from 'lucide-react';
@@ -342,7 +342,7 @@ export default function DevToolHero() {
   {
     name: 'vectra:DashboardRevealHero', version: '1.0.0', slug: 'dashboard-reveal-hero',
     label: 'Dashboard Reveal Hero', description: 'Hero with an app dashboard mockup bleeding off the bottom edge.',
-    category: 'sections', tags: ['hero', 'dashboard', 'mockup', 'saas', 'reveal'],
+    category: 'hero', tags: ['hero', 'dashboard', 'mockup', 'saas', 'reveal'],
     importMeta: { packageName: '', exportName: 'DashboardRevealHero', isDefaultExport: true },
     sourceCode: `import React from 'react';
 export default function DashboardRevealHero() {
@@ -386,7 +386,7 @@ export default function DashboardRevealHero() {
   {
     name: 'vectra:SaasClassicPricing', version: '1.0.0', slug: 'saas-classic-pricing',
     label: 'SaaS Classic Pricing', description: 'Three-tier pricing cards with highlighted middle plan and feature lists.',
-    category: 'sections', tags: ['pricing', 'saas', 'tiers', 'cards'],
+    category: 'pricing', tags: ['pricing', 'saas', 'tiers', 'cards'],
     importMeta: { packageName: '', exportName: 'SaasClassicPricing', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { Check, Zap } from 'lucide-react';
@@ -439,7 +439,7 @@ export default function SaasClassicPricing() {
   {
     name: 'vectra:TogglePricing', version: '1.0.0', slug: 'toggle-pricing',
     label: 'Toggle Pricing', description: 'Monthly/annual pricing toggle with live price switch and savings badge.',
-    category: 'sections', tags: ['pricing', 'toggle', 'annual', 'monthly', 'interactive'],
+    category: 'pricing', tags: ['pricing', 'toggle', 'annual', 'monthly', 'interactive'],
     importMeta: { packageName: '', exportName: 'TogglePricing', isDefaultExport: true },
     sourceCode: `import React, { useState } from 'react';
 import { Check } from 'lucide-react';
@@ -494,7 +494,7 @@ export default function TogglePricing() {
   {
     name: 'vectra:FeatureMatrixPricing', version: '1.0.0', slug: 'feature-matrix-pricing',
     label: 'Feature Matrix Pricing', description: 'Enterprise comparison table with check/cross feature matrix across plans.',
-    category: 'sections', tags: ['pricing', 'comparison', 'matrix', 'enterprise', 'table'],
+    category: 'pricing', tags: ['pricing', 'comparison', 'matrix', 'enterprise', 'table'],
     importMeta: { packageName: '', exportName: 'FeatureMatrixPricing', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { Check, X } from 'lucide-react';
@@ -540,7 +540,7 @@ export default function FeatureMatrixPricing() {
   {
     name: 'vectra:LifetimeDealPricing', version: '1.0.0', slug: 'lifetime-deal-pricing',
     label: 'Lifetime Deal Pricing', description: 'AppSumo-style one-time payment card with urgency countdown and strikethrough price.',
-    category: 'sections', tags: ['pricing', 'lifetime', 'one-time', 'deal', 'urgency'],
+    category: 'pricing', tags: ['pricing', 'lifetime', 'one-time', 'deal', 'urgency'],
     importMeta: { packageName: '', exportName: 'LifetimeDealPricing', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { Star, Shield, Clock } from 'lucide-react';
@@ -585,7 +585,7 @@ export default function LifetimeDealPricing() {
   {
     name: 'vectra:UsageBasedPricing', version: '1.0.0', slug: 'usage-based-pricing',
     label: 'Usage-Based Pricing', description: 'Pay-as-you-go pricing table with per-unit rates and enterprise CTA.',
-    category: 'sections', tags: ['pricing', 'usage', 'api', 'metered', 'developer'],
+    category: 'pricing', tags: ['pricing', 'usage', 'api', 'metered', 'developer'],
     importMeta: { packageName: '', exportName: 'UsageBasedPricing', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { Server, Activity, ArrowRight } from 'lucide-react';
@@ -636,7 +636,7 @@ export default function UsageBasedPricing() {
   {
     name: 'vectra:MinimalFooter', version: '1.0.0', slug: 'minimal-footer',
     label: 'Minimal Footer', description: 'Clean centered footer with logo, nav links, and social icons.',
-    category: 'sections', tags: ['footer', 'minimal', 'centered', 'social'],
+    category: 'footer', tags: ['footer', 'minimal', 'centered', 'social'],
     importMeta: { packageName: '', exportName: 'MinimalFooter', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { Twitter, Github, Linkedin } from 'lucide-react';
@@ -669,7 +669,7 @@ export default function MinimalFooter() {
   {
     name: 'vectra:MegaFooter', version: '1.0.0', slug: 'mega-footer',
     label: 'Mega Footer', description: 'Full-width multi-column footer with newsletter signup and social links.',
-    category: 'sections', tags: ['footer', 'mega', 'newsletter', 'multi-column'],
+    category: 'footer', tags: ['footer', 'mega', 'newsletter', 'multi-column'],
     importMeta: { packageName: '', exportName: 'MegaFooter', isDefaultExport: true },
     sourceCode: `import React from 'react';
 import { ArrowRight, Twitter, Github, Youtube } from 'lucide-react';
@@ -714,7 +714,7 @@ export default function MegaFooter() {
   {
     name: 'vectra:SplitCTAFooter', version: '1.0.0', slug: 'split-cta-footer',
     label: 'Split CTA Footer', description: 'Footer with a full-width CTA band above the dark copyright bar.',
-    category: 'sections', tags: ['footer', 'cta', 'split', 'conversion'],
+    category: 'footer', tags: ['footer', 'cta', 'split', 'conversion'],
     importMeta: { packageName: '', exportName: 'SplitCTAFooter', isDefaultExport: true },
     sourceCode: `import React from 'react';
 export default function SplitCTAFooter() {
@@ -747,7 +747,7 @@ export default function SplitCTAFooter() {
   {
     name: 'vectra:AppSlimFooter', version: '1.0.0', slug: 'app-slim-footer',
     label: 'App Slim Footer', description: 'Minimal one-line app footer with copyright and system status.',
-    category: 'sections', tags: ['footer', 'slim', 'app', 'minimal', 'status'],
+    category: 'footer', tags: ['footer', 'slim', 'app', 'minimal', 'status'],
     importMeta: { packageName: '', exportName: 'AppSlimFooter', isDefaultExport: true },
     sourceCode: `import React from 'react';
 export default function AppSlimFooter() {

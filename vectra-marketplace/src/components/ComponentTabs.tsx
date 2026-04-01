@@ -7,11 +7,12 @@ import { CopyButton } from './ui/CopyButton';
 
 interface ComponentTabsProps {
   sourceCode: string;
+  compiledCode: string;
   label: string;
   exportName: string;
 }
 
-export function ComponentTabs({ sourceCode, label, exportName }: ComponentTabsProps) {
+export function ComponentTabs({ sourceCode, compiledCode, label, exportName }: ComponentTabsProps) {
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
 
   return (
@@ -49,7 +50,7 @@ export function ComponentTabs({ sourceCode, label, exportName }: ComponentTabsPr
       <div className="bg-m3-background min-h-[400px]">
         {activeTab === 'preview' ? (
           <div className="p-0 h-full">
-            <LivePreview sourceCode={sourceCode} label={label} />
+            <LivePreview compiledCode={compiledCode} label={label} />
           </div>
         ) : (
           <div className="relative w-full h-full max-h-[600px] overflow-auto bg-[#1e1e1e]">
