@@ -53,7 +53,13 @@ import { ${component.importMeta.exportName} } from '${component.importMeta.packa
       transform: { react: { runtime: 'classic' } },
       target: 'es2015',
     },
-    isModule: true
+    // CommonJS output converts:
+    //   import { X } from 'lucide-react'  →  var { X } = require('lucide-react')
+    //   import React from 'react'         →  var _react = require('react')
+    //   export default function Foo()     →  exports.default = Foo
+    // The iframe shell provides a require() shim that maps these to globals.
+    module: { type: 'commonjs' },
+    isModule: true,
   });
   
   // SWC might leave 'export default' inside. The preview iframe needs to extract it,

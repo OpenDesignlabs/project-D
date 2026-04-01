@@ -144,11 +144,15 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
   );
 }
 
+
+
 // ─── Shell builder ────────────────────────────────────────────────────────────
+// SWC compiles server-side with module:{type:'commonjs'} so:
+//   import { X } from 'lucide-react'  →  var _lucide = require('lucide-react')
+//   export default function Foo()     →  exports.default = Foo
+// The iframe shell provides a require() shim mapping packages to UMD globals.
 
 function buildPreviewShell(compiledCode: string, label: string): string {
-  // Use JSON.stringify for safe embedding — handles all escaping automatically.
-  // The shell will JSON.parse it back.
   const jsonSource = JSON.stringify(compiledCode);
 
   return `<!DOCTYPE html>
@@ -157,20 +161,11 @@ function buildPreviewShell(compiledCode: string, label: string): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Preview: ${label}</title>
-
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- React 18 UMD (sync, blocking — available immediately after) -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-
-  <!-- IMPORTANT: lucide-react UMD bundle expects global "react" (lowercase) instead of "React" -->
   <script>window.react = window.React;</script>
-
-  <!-- Lucide React UMD — pinned to 0.383.0 to match marketplace package.json and prevent unpkg latest 404s -->
   <script src="https://unpkg.com/lucide-react@0.383.0/dist/umd/lucide-react.js"></script>
-
   <style>
     * { box-sizing: border-box; margin: 0; }
     body { padding: 0; font-family: system-ui, -apple-system, sans-serif; }
@@ -180,159 +175,99 @@ function buildPreviewShell(compiledCode: string, label: string): string {
 <body>
   <div id="root"></div>
   <script>
-    // ─── Source (embedded via JSON.stringify — no escaping issues) ────────────
     var __SOURCE__ = ${jsonSource};
 
-    // ─── Import transformer ───────────────────────────────────────────────────
-    // Transforms import statements into forms the sandbox can execute.
-    // Runs inside renderComponent (after load) so all CDN globals are ready.
-    function transformImports(src) {
-      // 1. lucide-react named imports → destructure from __LucideIcons
-      //    import { X, Y } from 'lucide-react'
-      //    → const { X, Y } = window.__LucideIcons || {};
-      src = src.replace(
-        /import\\s*\\{([^}]+)\\}\\s*from\\s*['"]lucide-react['"]\\s*;?/g,
-        function(_, names) {
-          // Handle "X as Y" aliases — keep original name for destructuring
-          var cleaned = names.replace(/\\w+\\s+as\\s+(\\w+)/g, '$1').trim();
-          return 'var { ' + cleaned + ' } = (window.__LucideIcons || {});';
-        }
-      );
-
-      // 2. React default import → remove (React is already global)
-      src = src.replace(/import\\s+React\\s*,?\\s*\\{[^}]*\\}\\s*from\\s*['"]react['"]\\s*;?[\\r\\n]?/g, '');
-      src = src.replace(/import\\s+React\\s+from\\s*['"]react['"]\\s*;?[\\r\\n]?/g, '');
-
-      // 3. React named imports → remove (useState etc. are global stubs)
-      src = src.replace(/import\\s*\\{[^}]*\\}\\s*from\\s*['"]react['"]\\s*;?[\\r\\n]?/g, '');
-
-      // 4. framer-motion → remove (motion stub is global)
-      src = src.replace(/import\\s+.*?\\s+from\\s*['"]framer-motion['"]\\s*;?[\\r\\n]?/g, '');
-      src = src.replace(/import\\s*\\{[^}]*\\}\\s*from\\s*['"]framer-motion['"]\\s*;?[\\r\\n]?/g, '');
-
-      // 5. Any remaining import statements → remove
-      src = src.replace(/^import\\s+[^\\n]*\\n?/gm, '');
-
-      return src.trim();
-    }
-
-    // ─── Main renderer ────────────────────────────────────────────────────────
     function renderComponent() {
       try {
-        // Detect Lucide global — UMD bundle registers as lucideReact
-        // Defensive: try all known global names
-        window.__LucideIcons = (
+        // Detect lucide UMD global (pinned version exposes lucideReact)
+        var __lucide = (
           typeof lucideReact !== 'undefined' ? lucideReact :
           typeof LucideReact !== 'undefined' ? LucideReact :
           {}
         );
 
-        // Global stubs — React hooks
-        window.useState      = React.useState;
-        window.useEffect     = React.useEffect;
-        window.useRef        = React.useRef;
-        window.useCallback   = React.useCallback;
-        window.useMemo       = React.useMemo;
-        window.useReducer    = React.useReducer;
-
-        // cn helper
+        // React hook stubs
+        window.useState    = React.useState;
+        window.useEffect   = React.useEffect;
+        window.useRef      = React.useRef;
+        window.useCallback = React.useCallback;
+        window.useMemo     = React.useMemo;
+        window.useReducer  = React.useReducer;
         window.cn = function() {
           return Array.prototype.slice.call(arguments).filter(Boolean).join(' ');
         };
 
-        // Framer Motion stub — renders as plain HTML elements, no animation
+        // Framer Motion stub
         window.motion = new Proxy({}, {
           get: function(_, tag) {
             return React.forwardRef(function(_ref, ref) {
-              var children = _ref.children;
-              var initial = _ref.initial, animate = _ref.animate, exit = _ref.exit,
-                  transition = _ref.transition, variants = _ref.variants,
-                  whileHover = _ref.whileHover, whileTap = _ref.whileTap,
-                  whileInView = _ref.whileInView, viewport = _ref.viewport;
               var rest = Object.assign({}, _ref);
-              ['children','initial','animate','exit','transition','variants',
-               'whileHover','whileTap','whileInView','viewport'].forEach(function(k) { delete rest[k]; });
-              return React.createElement(tag, Object.assign({ ref: ref }, rest), children);
+              ['initial','animate','exit','transition','variants',
+               'whileHover','whileTap','whileInView','viewport'].forEach(function(k){ delete rest[k]; });
+              return React.createElement(tag, Object.assign({ ref: ref }, rest));
             });
           }
         });
-        window.AnimatePresence = function(_ref) { return _ref.children || null; };
+        window.AnimatePresence = function(p) { return p.children || null; };
 
-        // ── Transform source ──
-        var transformed = transformImports(__SOURCE__);
-
-        // ── Find exported component name ──
-        var nameMatch = transformed.match(/export\\s+default\\s+function\\s+(\\w+)/);
-        var componentName = nameMatch ? nameMatch[1] : null;
-
-        // ── Strip export keywords so it's plain JS ──
-        // (SWC compiles to ES5 React.createElement, but keeps 'export default function')
-        var execSource = transformed
-          .replace(/export\\s+default\\s+function\\s+(\\w+)/g, 'function $1')
-          .replace(/export\\s+default\\s+/g, '');
-
-        var compiled = execSource;
-
-        // ── Execute and extract component ──
-        var Component = null;
-
-        if (componentName) {
-          // Direct approach: name is known, return it explicitly
-          var fn = new Function(
-            'React', 'useState', 'useEffect', 'useRef', 'useCallback', 'useMemo', 'useReducer',
-            'motion', 'AnimatePresence', 'cn',
-            compiled + '\\nreturn typeof ' + componentName + ' !== "undefined" ? ' + componentName + ' : null;'
-          );
-          Component = fn(
-            React,
-            React.useState, React.useEffect, React.useRef,
-            React.useCallback, React.useMemo, React.useReducer,
-            window.motion, window.AnimatePresence, window.cn
-          );
+        // require() shim — maps CJS require() calls to UMD globals
+        // SWC CommonJS output: import { X } from 'lucide-react' → require('lucide-react')
+        function require(mod) {
+          if (mod === 'react')         return React;
+          if (mod === 'react-dom')     return ReactDOM;
+          if (mod === 'lucide-react')  return __lucide;
+          if (mod === 'framer-motion') return { motion: window.motion, AnimatePresence: window.AnimatePresence };
+          console.warn('[preview] Unknown require:', mod);
+          return {};
         }
 
-        // Fallback: scan compiled code for any function that looks like a component
+        // Execute CJS module — SWC writes exports.default = Component
+        var exports = {};
+        var module  = { exports: exports };
+
+        var factory = new Function(
+          'require', 'exports', 'module',
+          'React', 'useState', 'useEffect', 'useRef', 'useCallback', 'useMemo', 'useReducer',
+          'motion', 'AnimatePresence', 'cn',
+          __SOURCE__
+        );
+
+        factory(
+          require, exports, module,
+          React,
+          React.useState, React.useEffect, React.useRef,
+          React.useCallback, React.useMemo, React.useReducer,
+          window.motion, window.AnimatePresence, window.cn
+        );
+
+        // Extract default export (SWC CJS sets exports.default = Foo)
+        var Component = exports['default'] || module.exports['default'] || module.exports;
+
+        // Fallback: any exported function
         if (typeof Component !== 'function') {
-          var funcMatch = compiled.match(/function\\s+(\\w+)\\s*\\(/);
-          if (funcMatch) {
-            componentName = funcMatch[1];
-            var fn2 = new Function(
-              'React', 'useState', 'useEffect', 'useRef', 'useCallback', 'useMemo', 'useReducer',
-              'motion', 'AnimatePresence', 'cn',
-              compiled + '\\nreturn typeof ' + componentName + ' !== "undefined" ? ' + componentName + ' : null;'
-            );
-            Component = fn2(
-              React,
-              React.useState, React.useEffect, React.useRef,
-              React.useCallback, React.useMemo, React.useReducer,
-              window.motion, window.AnimatePresence, window.cn
-            );
+          var keys = Object.keys(exports);
+          for (var i = 0; i < keys.length; i++) {
+            if (typeof exports[keys[i]] === 'function') { Component = exports[keys[i]]; break; }
           }
         }
 
         if (typeof Component !== 'function') {
-          throw new Error('No valid React component found in source. Looked for: ' + componentName);
+          throw new Error('No React component found. exports: ' + JSON.stringify(Object.keys(exports)));
         }
 
-        // ── Render ──
-        var root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(Component));
-
+        ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(Component));
         window.parent.postMessage({ type: 'vectra-preview-ready' }, '*');
 
       } catch (err) {
-        console.error('[LivePreview] Render error:', err);
         var msg = err && err.message ? err.message : String(err);
+        console.error('[LivePreview]', msg);
         document.getElementById('root').innerHTML =
           '<div style="padding:20px;color:#ef4444;font-family:monospace;font-size:11px;line-height:1.6;">' +
-          '<strong style="font-size:13px;">⚠ Preview error</strong><br><br>' +
-          msg.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
-          '</div>';
+          '<strong>⚠ Preview error</strong><br><br>' + msg.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
         window.parent.postMessage({ type: 'vectra-preview-error', message: msg }, '*');
       }
     }
 
-    // Run after all CDN scripts are fully loaded
     window.addEventListener('load', renderComponent);
   </script>
 </body>
