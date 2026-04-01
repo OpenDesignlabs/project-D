@@ -22,7 +22,7 @@ export default function ComponentsLibraryPage() {
     <div className="min-h-screen flex flex-col bg-m3-background selection:bg-m3-primaryContainer selection:text-m3-onPrimaryContainer relative">
       {/* ── Nav ── */}
       <header className="sticky top-0 z-50 border-b border-white/[0.04] bg-m3-background/70 backdrop-blur-2xl">
-        <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-m3-primary text-m3-onPrimary transition-all">
               <Boxes size={20} className="group-hover:scale-110 transition-transform duration-500 ease-out" />
@@ -34,8 +34,8 @@ export default function ComponentsLibraryPage() {
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <button className="flex items-center justify-between w-full px-4 py-2 bg-m3-surfaceContainerHighest/40 hover:bg-m3-surfaceContainerHighest/80 
                                border border-white/5 rounded-full text-sm text-m3-onSurfaceVariant transition-all">
-              <span className="flex items-center gap-2"><Search size={14} /> Search documentation...</span>
-              <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/20 text-[10px] font-mono font-medium opacity-70">
+              <span className="flex items-center gap-2"><Search size={14} /> Search components...</span>
+              <kbd className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/20 text-[10px] font-mono font-medium opacity-70 border border-white/5">
                 <span className="text-xs">⌘</span>K
               </kbd>
             </button>
@@ -57,7 +57,7 @@ export default function ComponentsLibraryPage() {
               target="_blank"
               rel="noopener noreferrer"
               className="group relative flex items-center gap-2 px-5 py-2 bg-m3-onSurface text-m3-surface hover:bg-m3-onSurface/90
-                         rounded-full text-sm font-semibold transition-all duration-300 ml-2"
+                         rounded-full text-sm font-semibold transition-all duration-300 ml-2 shadow-[0_0_20px_rgba(var(--m3-onSurface),0.1)] hover:shadow-[0_0_30px_rgba(var(--m3-onSurface),0.2)]"
             >
                <span className="relative z-10 flex items-center gap-2">
                   Launch Studio 
@@ -69,7 +69,7 @@ export default function ComponentsLibraryPage() {
       </header>
 
       {/* ── Main catalog ── */}
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 sm:px-6 py-8 md:py-12">
+      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <Suspense fallback={<CatalogSkeleton />}>
           <ComponentsData />
         </Suspense>
@@ -77,7 +77,7 @@ export default function ComponentsLibraryPage() {
 
       {/* ── Footer ── */}
       <footer className="bg-m3-background border-t border-white/[0.04] py-12 mt-auto">
-        <div className="max-w-[1400px] mx-auto px-6 flex flex-col sm:flex-row items-center
+        <div className="max-w-[1600px] mx-auto px-6 lg:px-8 flex flex-col sm:flex-row items-center
                         justify-between gap-6 text-sm text-m3-onSurfaceVariant font-medium">
           <span className="opacity-70">© 2026 Vectra Studio. All components are MIT licensed.</span>
           <div className="flex items-center gap-8">

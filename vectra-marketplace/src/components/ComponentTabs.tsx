@@ -16,45 +16,45 @@ export function ComponentTabs({ sourceCode, compiledCode, label, exportName }: C
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
 
   return (
-    <div className="flex flex-col rounded-2xl border border-m3-outlineVariant/30 bg-m3-surfaceContainer overflow-hidden shadow-sm">
-      {/* Tabs Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-m3-surfaceContainerHigh border-b border-m3-outlineVariant/20">
-        <div className="flex bg-m3-surfaceContainerHighest/50 p-1 rounded-lg">
+    <div className="flex flex-col w-full">
+      {/* Tabs Header (Magic UI Style) */}
+      <div className="flex items-center justify-between border-b border-white/[0.08] mb-6 px-1">
+        <div className="flex gap-6">
           <button
             onClick={() => setActiveTab('preview')}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            className={`flex items-center gap-2 pb-3 text-sm font-medium transition-colors border-b-2 ${
               activeTab === 'preview'
-                ? 'bg-m3-surface text-m3-onSurface shadow-sm ring-1 ring-white/10'
-                : 'text-m3-onSurfaceVariant/70 hover:text-m3-onSurface hover:bg-white/5'
+                ? 'border-m3-primary text-m3-onSurface'
+                : 'border-transparent text-m3-onSurfaceVariant hover:text-m3-onSurface'
             }`}
           >
-            <Eye size={14} /> Preview
+            <Eye size={16} /> Preview
           </button>
           <button
             onClick={() => setActiveTab('code')}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            className={`flex items-center gap-2 pb-3 text-sm font-medium transition-colors border-b-2 ${
               activeTab === 'code'
-                ? 'bg-m3-surface text-m3-onSurface shadow-sm ring-1 ring-white/10'
-                : 'text-m3-onSurfaceVariant/70 hover:text-m3-onSurface hover:bg-white/5'
+                ? 'border-m3-primary text-m3-onSurface'
+                : 'border-transparent text-m3-onSurfaceVariant hover:text-m3-onSurface'
             }`}
           >
-            <Code2 size={14} /> Code
+            <Code2 size={16} /> Code
           </button>
         </div>
         {activeTab === 'code' && (
-          <CopyButton text={sourceCode} />
+          <div className="pb-2">
+            <CopyButton text={sourceCode} />
+          </div>
         )}
       </div>
 
       {/* Content Area */}
-      <div className="bg-m3-background min-h-[400px]">
+      <div className="relative w-full">
         {activeTab === 'preview' ? (
-          <div className="p-0 h-full">
-            <LivePreview compiledCode={compiledCode} label={label} />
-          </div>
+          <LivePreview compiledCode={compiledCode} label={label} />
         ) : (
-          <div className="relative w-full h-full max-h-[600px] overflow-auto bg-[#1e1e1e]">
-             <pre className="p-5 text-xs font-mono text-[#d4d4d4] leading-relaxed">
+          <div className="relative w-full max-h-[600px] overflow-auto rounded-2xl bg-[#0d0d0d] border border-white/[0.05] shadow-sm">
+             <pre className="p-6 text-[13px] font-mono text-[#e5e5e5] leading-relaxed">
               <code>{sourceCode}</code>
             </pre>
           </div>

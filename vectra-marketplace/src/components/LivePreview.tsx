@@ -40,6 +40,7 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [iframeTheme, setIframeTheme] = useState<'dark'|'light'>('dark');
 
   // Manual refresh triggers the iframe recreation
   const handleRefresh = useCallback(() => {
@@ -53,7 +54,7 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
     setStatus('loading');
     setErrorMsg('');
 
-    iframe.srcdoc = buildPreviewShell(compiledCode, label);
+    iframe.srcdoc = buildPreviewShell(compiledCode, label, iframeTheme);
 
     const handleMessage = (e: MessageEvent) => {
       if (e.data?.type === 'vectra-preview-ready') setStatus('ready');
@@ -65,7 +66,7 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [compiledCode, label, refreshKey]);
+  }, [compiledCode, label, refreshKey, iframeTheme]);
 
   const DeviceButton = ({ mode, icon: Icon }: { mode: 'desktop'|'tablet'|'mobile', icon: any }) => (
     <button
@@ -81,19 +82,26 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
   );
 
   return (
-    <div className="rounded-2xl border border-m3-outlineVariant/30 overflow-hidden bg-m3-surfaceContainerHigh flex flex-col">
+    <div className="rounded-2xl border border-m3-outlineVariant/30 overflow-hidden bg-m3-surfaceContainerHigh flex flex-col relative shadow-sm">
       {/* ── Toolbar ── */}
-      <div className="flex items-center justify-between px-4 py-2 bg-m3-surfaceContainer border-b border-m3-outlineVariant/20 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 bg-m3-surfaceContainer border-b border-m3-outlineVariant/20 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="flex gap-1.5 mr-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-rose-500/60" />
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
+          <div className="flex gap-1.5 mr-3">
+            <div className="w-3 h-3 rounded-full bg-rose-500/80 shadow-inner" />
+            <div className="w-3 h-3 rounded-full bg-amber-500/80 shadow-inner" />
+            <div className="w-3 h-3 rounded-full bg-emerald-500/80 shadow-inner" />
           </div>
           <DeviceButton mode="desktop" icon={Monitor} />
           <DeviceButton mode="tablet" icon={Tablet} />
           <DeviceButton mode="mobile" icon={Smartphone} />
-          <div className="w-px h-4 bg-m3-outlineVariant/30 mx-1" />
+          <div className="w-px h-5 bg-m3-outlineVariant/30 mx-2" />
+          <button
+            onClick={() => setIframeTheme(t => t === 'dark' ? 'light' : 'dark')}
+            className="p-1.5 rounded-md text-m3-onSurfaceVariant/70 hover:text-m3-onSurface hover:bg-m3-surfaceContainerHighest transition-colors"
+            title="Toggle Iframe Theme"
+          >
+             {iframeTheme === 'dark' ? <span className="text-xs font-bold leading-none">☽</span> : <span className="text-xs font-bold leading-none">☀️</span>}
+          </button>
           <button
             onClick={handleRefresh}
             className="p-1.5 rounded-md text-m3-onSurfaceVariant/70 hover:text-m3-onSurface hover:bg-m3-surfaceContainerHighest transition-colors"
@@ -103,11 +111,11 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-m3-onSurfaceVariant font-mono max-w-[120px] sm:max-w-none truncate">
+          <span className="text-xs text-m3-onSurfaceVariant/80 font-mono tracking-tight bg-m3-surfaceContainerHighest px-2 py-0.5 rounded-md truncate max-w-[150px] sm:max-w-none shadow-inner border border-white/5">
             preview.vectra.dev
           </span>
-          {status === 'error'   && <span className="text-[10px] text-rose-400 font-medium">Error</span>}
-          {status === 'ready'   && <span className="text-[10px] text-emerald-400 font-medium">Ready</span>}
+          {status === 'error'   && <span className="text-[10px] text-rose-400 font-medium tracking-wide uppercase">Error</span>}
+          {status === 'ready'   && <span className="text-[10px] text-emerald-400 font-medium tracking-wide uppercase">Ready</span>}
         </div>
       </div>
 
@@ -118,24 +126,24 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
       )}
 
       {/* ── Resizable area ── */}
-      <div className="relative flex-1 bg-zinc-950/50 flex justify-center w-full overflow-hidden">
+      <div className="relative flex-1 bg-zinc-950/70 flex justify-center w-full overflow-hidden bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px]">
         {/* The resizable box */}
         <div className={cn(
-          "relative min-w-[320px] max-w-full bg-white transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden border-x border-white/5",
-          device === 'desktop' ? 'w-full !transition-none resize-x' : '',
+          "relative min-w-[300px] max-w-full bg-white transition-all duration-[400ms] ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden border-x border-b border-white/10 shadow-2xl rounded-b-xl",
+          device === 'desktop' ? 'w-full !transition-none resize-x overflow-auto' : '',
           device === 'tablet'  ? 'w-[768px]' : '',
           device === 'mobile'  ? 'w-[375px]' : ''
         )}>
           {device === 'desktop' && (
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-8 bg-zinc-800/80 rounded-l flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none z-10">
-              <GripVertical size={12} className="text-zinc-400" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-12 bg-zinc-800/60 backdrop-blur-md rounded-l items-center justify-center cursor-ew-resize opacity-100 shadow-xl border border-white/10 border-r-0 z-10 hover:bg-zinc-700 transition-colors hidden sm:flex">
+              <GripVertical size={14} className="text-zinc-300" />
             </div>
           )}
           <iframe
             key={refreshKey}
             ref={iframeRef}
             title={`Preview: ${label}`}
-            className="w-full h-full min-h-[480px] border-0"
+            className="w-full h-full min-h-[500px] border-0"
             sandbox="allow-scripts"
           />
         </div>
@@ -152,16 +160,22 @@ export function LivePreview({ compiledCode, label }: LivePreviewProps) {
 //   export default function Foo()     →  exports.default = Foo
 // The iframe shell provides a require() shim mapping packages to UMD globals.
 
-function buildPreviewShell(compiledCode: string, label: string): string {
+function buildPreviewShell(compiledCode: string, label: string, theme: 'dark'|'light'): string {
   const jsonSource = JSON.stringify(compiledCode);
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="${theme}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Preview: ${label}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {} }
+    }
+  </script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script>window.react = window.React;</script>
@@ -169,7 +183,9 @@ function buildPreviewShell(compiledCode: string, label: string): string {
   <style>
     * { box-sizing: border-box; margin: 0; }
     body { padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    #root { min-height: 100%; }
+    #root { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+    html.dark body { background: #000; color: #fff; }
+    html.light body { background: #fff; color: #000; }
   </style>
 </head>
 <body>

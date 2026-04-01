@@ -29,21 +29,30 @@ export function ComponentCard({ component }: ComponentCardProps) {
     <Link
       href={`/components/${component.slug}`}
       aria-label={`View component: ${component.label}`}
-      className="group relative flex flex-col bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] rounded-[32px] overflow-hidden
-                 transition-all duration-500 ease-out hover:-translate-y-2
-                 shadow-lg hover:shadow-2xl hover:shadow-m3-primary/10 hover:bg-m3-surfaceContainerLowest/70
-                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-m3-background"
+      className="group relative flex flex-col bg-m3-surfaceContainerLowest/20 backdrop-blur-3xl border border-white/5 rounded-2xl overflow-hidden
+                 transition-all duration-500 ease-out hover:-translate-y-1
+                 shadow-lg hover:shadow-[0_0_40px_-10px_rgba(var(--m3-primary),0.2)] hover:bg-m3-surfaceContainerLowest/60
+                 hover:border-m3-primary/30
+                 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-m3-primary focus-visible:ring-offset-2 focus-visible:ring-offset-m3-background"
     >
 
       {/* Preview area */}
-      <div className="relative h-56 bg-transparent border-b border-white/[0.05] overflow-hidden
-                      bg-grid-pattern bg-grid flex items-center justify-center p-6">
+      <div className="relative h-60 bg-transparent overflow-hidden
+                      bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:16px_16px] flex items-center justify-center p-4">
         {component.previewImageUrl ? (
-          <img
-            src={component.previewImageUrl}
-            alt={component.label}
-            className="w-full h-full object-cover rounded-xl border border-m3-outlineVariant/20 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
-          />
+          <div className="relative w-full h-full rounded-xl border border-m3-outlineVariant/20 overflow-hidden shadow-sm">
+            <img
+              src={component.previewImageUrl}
+              alt={component.label}
+              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700 ease-out"
+            />
+            {/* 21st.dev / Magic UI style hover overlay */}
+            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-[2px]">
+              <div className="px-4 py-2 bg-m3-surface/90 text-m3-onSurface text-xs font-semibold tracking-wide rounded-full shadow-xl border border-white/10 translate-y-2 group-hover:translate-y-0 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
+                View Component
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="relative w-full h-full flex items-center justify-center">
             {/* Abstract Wireframe Composition */}
@@ -73,58 +82,42 @@ export function ComponentCard({ component }: ComponentCardProps) {
       </div>
 
       {/* Info area */}
-      <div className="flex flex-col gap-3 p-5">
+      <div className="flex flex-col gap-2.5 p-5 border-t border-white/[0.02]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="font-semibold text-m3-onSurface text-base leading-tight group-hover:text-m3-primary transition-colors">
+            <h3 className="font-medium text-m3-onSurface text-base tracking-tight group-hover:text-m3-primary transition-colors">
               {component.label}
             </h3>
-            <p className="text-xs text-m3-onSurfaceVariant mt-1 font-mono">{component.name}</p>
           </div>
-          <span className={`flex-shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full ${categoryColor}`}>
+          <span className={`flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-md border border-white/10 text-m3-onSurfaceVariant/80 uppercase tracking-wider`}>
             {component.category}
           </span>
         </div>
 
-        <p className="text-sm text-m3-onSurfaceVariant line-clamp-2 leading-relaxed">
+        <p className="text-sm text-m3-onSurfaceVariant/70 line-clamp-2 leading-relaxed font-light">
           {component.description}
         </p>
 
-        {/* Tags */}
-        {component.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {component.tags.slice(0, 3).map(tag => (
-              <span key={tag} className="text-[11px] font-medium px-2 py-0.5 bg-m3-surfaceContainerHighest text-m3-onSurfaceVariant rounded-full">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
         {/* Footer stats */}
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/[0.05]">
-          <div className="flex items-center gap-4 text-m3-onSurfaceVariant/80 font-medium">
-            <span className="flex items-center gap-1.5 text-[11px] tracking-wide" aria-label={`${component.downloads} downloads`}>
-              <Download size={12} className="text-m3-outline/60" aria-hidden="true" />
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/[0.02]">
+          <div className="flex items-center gap-4 text-m3-onSurfaceVariant/60 font-medium">
+            <span className="flex items-center gap-1.5 text-[11px]" aria-label={`${component.downloads} downloads`}>
+              <Download size={13} aria-hidden="true" />
               {component.downloads.toLocaleString()}
             </span>
-            <span className="flex items-center gap-1.5 text-[11px] tracking-wide" aria-label={`${component.stars} stars`}>
-              <Star size={12} className="text-m3-outline/60" aria-hidden="true" />
+            <span className="flex items-center gap-1.5 text-[11px]" aria-label={`${component.stars} stars`}>
+              <Star size={13} aria-hidden="true" />
               {component.stars}
             </span>
           </div>
           {component.isVerified && (
-            <span className="flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase text-m3-tertiary bg-m3-tertiary/10 px-2 py-0.5 rounded-sm" title="Verified Publisher">
-              <Sparkles size={10} aria-hidden="true" />
-              Verified
+            <span className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest text-[#A8C7FA]" title="Verified Publisher">
+              <Sparkles size={11} aria-hidden="true" />
+              Official
             </span>
           )}
         </div>
       </div>
-
-      {/* Hover accent line */}
-      <div className="absolute bottom-0 left-0 h-1 w-0 bg-m3-primary
-                      group-hover:w-full transition-all duration-300 ease-out" />
     </Link>
   );
 }

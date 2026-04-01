@@ -8,10 +8,10 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-m3-background selection:bg-m3-primaryContainer selection:text-m3-onPrimaryContainer relative">
 
       {/* ── Nav ── */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.04] bg-m3-background/70 backdrop-blur-2xl">
+      <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-m3-background/60 backdrop-blur-3xl shadow-sm">
         <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-m3-primary text-m3-onPrimary transition-all">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-m3-primary/90 text-m3-onPrimary transition-all shadow-md backdrop-blur-md">
               <Boxes size={20} className="group-hover:scale-110 transition-transform duration-500 ease-out" />
             </div>
             <span className="font-display font-semibold text-m3-onSurface text-xl leading-none tracking-tight">Vectra</span>
@@ -61,8 +61,8 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-grid-pattern bg-grid opacity-20 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
         
         <div className="relative max-w-[1400px] mx-auto px-6 py-24 lg:py-32 flex flex-col items-center text-center gap-6 z-10">
-          <div className="flex items-center gap-2.5 px-5 py-2 bg-m3-surfaceContainerLowest/60 backdrop-blur-xl text-m3-onSurfaceVariant
-                          rounded-full text-xs font-semibold tracking-widest uppercase ring-1 ring-white/10">
+          <div className="flex items-center gap-2.5 px-5 py-2 bg-m3-surfaceContainerLowest/30 backdrop-blur-2xl text-m3-onSurfaceVariant
+                          rounded-full text-xs font-semibold tracking-widest uppercase ring-1 ring-white/10 shadow-lg">
              <Sparkles size={12} className="text-m3-primary" />
              <span>
                 Production-ready components
@@ -83,11 +83,11 @@ export default function HomePage() {
           </p>
 
           <div className="flex items-center justify-center gap-4 mt-8 w-full max-w-md">
-            <Link href={"/components" as any} className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-primary text-m3-onPrimary rounded-xl font-semibold hover:bg-m3-primary/90 transition-colors shadow-sm">
+            <Link href={"/components" as any} className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-primary/90 backdrop-blur-xl border border-white/10 text-m3-onPrimary rounded-2xl font-semibold hover:bg-m3-primary transition-colors shadow-[0_0_30px_-5px_rgba(var(--m3-primary),0.3)]">
               Explore <ArrowRight size={16} />
             </Link>
             <a href="https://vectra-docs-pi.vercel.app/" target="_blank" rel="noreferrer" 
-               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-surfaceContainerHigh text-m3-onSurface rounded-xl font-semibold hover:bg-m3-surfaceContainerHighest transition-colors border border-white/5 shadow-sm">
+               className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-m3-surfaceContainerHigh/60 backdrop-blur-xl text-m3-onSurface rounded-2xl font-semibold hover:bg-m3-surfaceContainerHighest transition-colors border border-white/10 shadow-sm">
               <Book size={18} className="opacity-80" /> Read Docs
             </a>
           </div>
@@ -121,40 +121,40 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Card 1 */}
-          <div className="bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] p-8 rounded-[32px] flex flex-col items-start hover:bg-m3-surfaceContainerLowest/60 transition-colors shadow-sm">
-            <div className="w-14 h-14 rounded-[20px] bg-m3-primary/10 flex items-center justify-center text-m3-primary mb-6 ring-1 ring-m3-primary/20 shadow-inner">
+          <div className="bg-m3-surfaceContainerLowest/20 backdrop-blur-3xl border border-white/[0.08] p-8 rounded-2xl flex flex-col items-start hover:bg-m3-surfaceContainerLowest/40 hover:border-m3-primary/30 hover:-translate-y-1 transition-all duration-500 shadow-xl hover:shadow-[0_0_30px_-5px_rgba(var(--m3-primary),0.15)]">
+            <div className="w-14 h-14 rounded-xl bg-m3-primary/10 flex items-center justify-center text-m3-primary mb-6 ring-1 ring-m3-primary/20 shadow-inner">
               <Layers size={28} />
             </div>
             <h3 className="text-xl font-bold text-m3-onSurface mb-3">Drag & Drop</h3>
-            <p className="text-m3-onSurfaceVariant text-sm leading-relaxed">
+            <p className="text-m3-onSurfaceVariant/80 text-sm leading-relaxed font-light">
               Pull components directly into the local visual builder canvas. Fully responsive, completely fluid.
             </p>
           </div>
 
           {/* Card 2 */}
-          <div className="bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] p-8 rounded-[32px] flex flex-col items-start hover:bg-m3-surfaceContainerLowest/60 transition-colors shadow-sm">
-            <div className="w-14 h-14 rounded-[20px] bg-m3-secondaryContainer/50 flex items-center justify-center text-m3-onSecondaryContainer mb-6 ring-1 ring-white/10 shadow-inner">
+          <div className="bg-m3-surfaceContainerLowest/20 backdrop-blur-3xl border border-white/[0.08] p-8 rounded-2xl flex flex-col items-start hover:bg-m3-surfaceContainerLowest/40 hover:border-m3-secondary/30 hover:-translate-y-1 transition-all duration-500 shadow-xl hover:shadow-[0_0_30px_-5px_rgba(var(--m3-secondary),0.15)]">
+            <div className="w-14 h-14 rounded-xl bg-m3-secondaryContainer/50 flex items-center justify-center text-m3-onSecondaryContainer mb-6 ring-1 ring-white/10 shadow-inner">
               <Blocks size={28} strokeWidth={1.5} />
             </div>
             <h3 className="text-xl font-bold text-m3-onSurface mb-3">100% Modifiable</h3>
-            <p className="text-m3-onSurfaceVariant text-sm leading-relaxed">
+            <p className="text-m3-onSurfaceVariant/80 text-sm leading-relaxed font-light">
               Every component's code is instantly accessible. Edit states, props, and Tailwind classes directly.
             </p>
           </div>
 
           {/* Card 3 */}
-          <div className="bg-m3-surfaceContainerLowest/40 backdrop-blur-2xl border border-white/[0.05] p-8 rounded-[32px] flex flex-col items-start hover:bg-m3-surfaceContainerLowest/60 transition-colors shadow-sm">
-            <div className="w-14 h-14 rounded-[20px] bg-m3-tertiaryContainer/50 flex items-center justify-center text-m3-onTertiaryContainer mb-6 ring-1 ring-white/10 shadow-inner">
+          <div className="bg-m3-surfaceContainerLowest/20 backdrop-blur-3xl border border-white/[0.08] p-8 rounded-2xl flex flex-col items-start hover:bg-m3-surfaceContainerLowest/40 hover:border-m3-tertiary/30 hover:-translate-y-1 transition-all duration-500 shadow-xl hover:shadow-[0_0_30px_-5px_rgba(var(--m3-tertiary),0.15)]">
+            <div className="w-14 h-14 rounded-xl bg-m3-tertiaryContainer/50 flex items-center justify-center text-m3-onTertiaryContainer mb-6 ring-1 ring-white/10 shadow-inner">
               <Code2 size={28} />
             </div>
             <h3 className="text-xl font-bold text-m3-onSurface mb-3">Export to Code</h3>
-            <p className="text-m3-onSurfaceVariant text-sm leading-relaxed">
+            <p className="text-m3-onSurfaceVariant/80 text-sm leading-relaxed font-light">
               Generated underlying code is pure React with Tailwind v4. No locked-in abstractions or weird wrappers.
             </p>
           </div>
         </div>
 
-        <div className="mt-8 bg-m3-surfaceContainerHighest/30 backdrop-blur-3xl border border-white/[0.05] rounded-[40px] p-10 md:p-12 flex flex-col md:flex-row items-center justify-between gap-10 shadow-xl relative overflow-hidden">
+        <div className="mt-12 bg-m3-surfaceContainerHighest/20 backdrop-blur-3xl border border-white/[0.08] rounded-3xl p-10 md:p-12 flex flex-col md:flex-row items-center justify-between gap-10 shadow-[0_0_40px_-10px_rgba(0,0,0,0.5)] relative overflow-hidden">
           {/* Subtle glow */}
           <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-64 h-64 bg-m3-primary/10 blur-[80px] rounded-full pointer-events-none" />
           
