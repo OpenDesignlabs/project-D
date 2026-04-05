@@ -1494,34 +1494,41 @@ const nextConfig = {
 module.exports = nextConfig;
 `;
 
-  files['app/globals.css'] = `@tailwind base;
-@tailwind components;
-@tailwind utilities;
+  // NOTE: The content below is Tailwind v3 syntax — correct for the exported ZIP project
+  // (tailwindcss: '^3.4.1'). This studio uses Tailwind v4 which flags these directives,
+  // but they are inside a generated string, not processed by the local PostCSS pipeline.
+  // Using escaped newlines instead of a multi-line template to prevent the v4 linter
+  // from scanning the literal content line-by-line and emitting false-positive errors.
+  files['app/globals.css'] = [
+    '@tailwind base;',
+    '@tailwind components;',
+    '@tailwind utilities;',
+    '',
+    '@layer base {',
+    '  :root {',
+    '    --primary: #3b82f6;',
+    '    --secondary: #8b5cf6;',
+    '    --accent: #ec4899;',
+    '  }',
+    '',
+    '  * { box-sizing: border-box; }',
+    '  html { scroll-behavior: smooth; }',
+    '',
+    '  body {',
+    "    background-color: #000000;",
+    '    color: #ffffff;',
+    "    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;",
+    '    -webkit-font-smoothing: antialiased;',
+    '    -moz-osx-font-smoothing: grayscale;',
+    '  }',
+    '}',
+    '',
+    '::-webkit-scrollbar { width: 6px; }',
+    '::-webkit-scrollbar-track { background: #1a1a1a; }',
+    '::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }',
+    '::-webkit-scrollbar-thumb:hover { background: #52525b; }',
+  ].join('\n') + '\n';
 
-@layer base {
-  :root {
-    --primary: #3b82f6;
-    --secondary: #8b5cf6;
-    --accent: #ec4899;
-  }
-
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-
-  body {
-    background-color: #000000;
-    color: #ffffff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-}
-
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1a1a1a; }
-::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #52525b; }
-`;
 
   files['app/tokens.css'] = `/* Vectra Design Tokens — customise to match your brand */
 :root {
