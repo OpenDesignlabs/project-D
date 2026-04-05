@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect,
     Suspense, Component, type ErrorInfo, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 // Tailwind v4 browser runtime — served locally by Vite.
 // Needed because @tailwindcss/postcss/@tailwindcss/vite are BUILD-TIME tools
 // that scan static source files. AI-generated classes are created at RUNTIME,
@@ -17,7 +18,7 @@ import { COMPONENT_TYPES } from '../../data/constants'; // for registry merge
 import { Resizer } from './Resizer';
 import { cn } from '../../lib/utils';
 
-import { Loader2, Plus, PlayCircle, Zap } from 'lucide-react';
+import { Loader2, Plus, PlayCircle, Zap, Copy, Trash2 } from 'lucide-react';
 // Preserve full framer-motion imports — AnimatePresence etc. are injected into
 // the AI sandbox so components that use them don’t crash with "undefined" errors.
 import { motion, AnimatePresence, useAnimation, useInView, useMotionValue, useTransform } from 'framer-motion';
@@ -748,6 +749,58 @@ const AINodeHeightHandle: React.FC<{
     );
 };
 
+// ─── SINGLE-NODE FLOATING TOOLBAR (portal-rendered from RenderNode) ───────────
+// TOOLBAR-1 [PERMANENT]: Fixed position — lives on document.body via createPortal,
+// OUTSIDE the world-transform div so it never scales with zoom.
+// Reads positon from nodeRef.getBoundingClientRect() — no document.querySelector needed.
+const _TOOLBAR_H   = 36;
+const _TOOLBAR_GAP = 8;
+
+const SingleNodeToolbar: React.FC<{
+    elementId: string;
+    nodeRef: React.RefObject<HTMLDivElement | null>;
+}> = ({ elementId, nodeRef }) => {
+    const { deleteElement, duplicateElement } = useProject();
+    const { clearSelection } = useUI();
+
+    const node = nodeRef.current;
+    if (!node) return null;
+    const rect = node.getBoundingClientRect();
+
+    // Prefer above; fall back to below the node when it would clip above viewport.
+    const toolbarAboveY = rect.top  - _TOOLBAR_H - _TOOLBAR_GAP;
+    const toolbarBelowY = rect.bottom + _TOOLBAR_GAP;
+    const toolbarY      = toolbarAboveY >= 4 ? toolbarAboveY : toolbarBelowY;
+    if (toolbarY + _TOOLBAR_H > window.innerHeight - 4) return null;
+
+    const Divider = () => <div className="w-px h-4 bg-white/10 shrink-0 mx-0.5" />;
+
+    return (
+        <div
+            className="fixed z-10001 pointer-events-auto"
+            style={{ left: Math.max(8, rect.left), top: toolbarY }}
+        >
+            <div className="flex items-center gap-0.5 bg-[#1a1a1c]/95 border border-white/9 rounded-xl px-1.5 py-1 shadow-2xl shadow-black/60 backdrop-blur-sm">
+                <button
+                    title="Duplicate (Cmd+D)"
+                    onClick={() => duplicateElement(elementId)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-all select-none"
+                >
+                    <Copy size={12} /><span>Duplicate</span>
+                </button>
+                <Divider />
+                <button
+                    title="Delete"
+                    onClick={() => { deleteElement(elementId); clearSelection(); }}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-all select-none"
+                >
+                    <Trash2 size={12} /><span>Delete</span>
+                </button>
+            </div>
+        </div>
+    );
+};
+
 interface RenderNodeProps { elementId: string; isMobileMirror?: boolean; }
 
 export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirror = false }) => {
@@ -804,6 +857,7 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
     }, [element.type, isMobileMirror]);
     const [isEditing, setIsEditing] = useState(false);
     const [isVisualHover, setIsVisualHover] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
     const [animKey, setAnimKey] = useState(0);
 
     const styleAny = element?.props?.style as Record<string, unknown> | undefined;
@@ -891,6 +945,8 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
     const parent = parentId ? elements[parentId] : null;
     const isParentCanvas = parent ? (parent.props.layoutMode === 'canvas') : false;
     const isArtboard = element.type === 'canvas' || element.type === 'webpage';
+    // Hoist isValidTarget to component scope so onDragOver can access it for visual feedback.
+    const isValidTarget = isArtboard || !!element.props.layoutMode;
     const canMove = !element.locked && activeTool === 'select' && isParentCanvas && !isArtboard && !isMobileMirror;
 
     const handlePointerDown = (e: React.PointerEvent) => {
@@ -1026,14 +1082,18 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
     const handlePointerUp = (e: React.PointerEvent) => {
         if (interaction?.itemId === elementId) {
             e.currentTarget.releasePointerCapture(e.pointerId);
-            setInteraction(null);
+            // Do NOT call setInteraction(null) here.
+            // Canvas.tsx's global onUp calls handleInteractionEnd() which does
+            // pushHistory() then setInteraction(null) — in the correct order.
+            // Nulling interaction here first causes Canvas.tsx onUp to see
+            // interaction===null and skip pushHistory entirely.
         }
     };
 
     const handleDrop = (e: React.DragEvent) => {
         if (!element) return;
-        const isValidTarget = isArtboard || element.props.layoutMode;
         if (!isValidTarget || element.locked || previewMode) return;
+        setIsDragOver(false);
 
         e.stopPropagation();
         e.preventDefault();
@@ -1688,7 +1748,25 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
+            onDragOver={(e) => {
+                if (!isValidTarget || element.locked || previewMode) return;
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragOver(true);
+            }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDoubleClick={(e) => {
+                // Polish 3: double-click to rename.
+                // Text-like nodes already enter inline editing on double-click (handled
+                // by handlePointerDown's dbl-click logic) — skip name-field for those.
+                const isTextLike = ['text', 'button', 'heading', 'link'].includes(element.type);
+                if (isTextLike || previewMode || isMobileMirror) return;
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('vectra:focus-name-field', {
+                    detail: { elementId },
+                    bubbles: false,
+                }));
+            }}
             onMouseEnter={() => setIsVisualHover(true)}
             onMouseLeave={() => setIsVisualHover(false)}
             contentEditable={isEditing}
@@ -1785,6 +1863,15 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
                     }}
                 />
             )}
+            {/* TOOLBAR-1: SingleNodeToolbar portal — lives in document.body, outside world-transform.
+                Uses nodeRef directly — no document.querySelector needed.
+                Guards: single-select, non-artboard, non-locked, non-mirror, non-editing, no interaction. */}
+            {isSelected && !isMobileMirror && !isEditing && !element.locked && !isArtboard && !previewMode && !interaction && (
+                createPortal(
+                    <SingleNodeToolbar nodeRef={nodeRef} elementId={elementId} />,
+                    document.body
+                )
+            )}
             {isMultiSel && !isSelected && !isMobileMirror && !previewMode && (
                 <div
                     className="pointer-events-none absolute rounded-[inherit]"
@@ -1805,6 +1892,19 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
                         outline: '1.5px dashed rgba(59,130,246,0.55)',
                         outlineOffset: '1px',
                         zIndex: 9997,
+                    }}
+                />
+            )}
+            {/* Polish 2: Drag-over visual ring — shows when a dragged item hovers a valid drop target. */}
+            {isDragOver && !isArtboard && !previewMode && (
+                <div
+                    className="pointer-events-none absolute rounded-[inherit]"
+                    style={{
+                        inset: 0,
+                        outline: '2px dashed #3b82f6',
+                        outlineOffset: '-2px',
+                        background: 'rgba(59,130,246,0.06)',
+                        zIndex: 9999,
                     }}
                 />
             )}

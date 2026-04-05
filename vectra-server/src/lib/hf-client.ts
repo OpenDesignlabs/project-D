@@ -61,7 +61,7 @@ export async function callHF(
           stream: false,
         }),
         // Server-side fetch — no CORS restriction, but set a hard timeout
-        signal: AbortSignal.timeout(90_000), // 90s max
+        signal: AbortSignal.timeout(240_000), // 4 mins (increased from 90s)
       });
 
       if (res.ok) {
@@ -131,7 +131,7 @@ export async function callHFStreaming(
           temperature,
           stream: true,
         }),
-        signal: AbortSignal.timeout(120_000), // 2 min for long generations
+        signal: AbortSignal.timeout(600_000), // 10 mins (increased from 2 mins)
       });
 
       if (!res.ok || !res.body) {

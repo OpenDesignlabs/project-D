@@ -7,7 +7,7 @@ import { ContainerPreview } from './ContainerPreview';
 import { FramePicker } from './FramePicker';
 import { TEMPLATES } from '../../data/templates';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
-import { Copy, Trash2, Wand2, Plus, MousePointerClick } from 'lucide-react';
+import { Wand2, Plus, MousePointerClick } from 'lucide-react';
 
 // Invisible 8px drag handle at the bottom of each artboard frame. Memoized — only re-renders when frameId or zoom changes.
 const ArtboardResizeHandle = React.memo<{ frameId: string; zoom: number }>(({ frameId, zoom }) => {
@@ -79,52 +79,6 @@ const ArtboardResizeHandle = React.memo<{ frameId: string; zoom: number }>(({ fr
 const TOOLBAR_H = 36;
 const TOOLBAR_GAP = 8;
 
-const SingleNodeToolbar: React.FC<{
-    elementId: string;
-    nodeEl: HTMLElement | null;
-}> = ({ elementId, nodeEl }) => {
-    const { deleteElement, duplicateElement } = useEditor();
-    const { clearSelection } = useUI();
-    // Artboard-type guard — we need elements for this check
-    const { elements } = useProject();
-    const element = elements[elementId];
-
-    if (!nodeEl || !element) return null;
-    // Never show toolbar on artboard root nodes
-    if (element.type === 'canvas' || element.type === 'webpage' || element.type === 'artboard') return null;
-    const rect = nodeEl.getBoundingClientRect();
-    const toolbarY = rect.top - TOOLBAR_H - TOOLBAR_GAP;
-    if (toolbarY < 4) return null; // would clip above viewport
-
-    const Divider = () => <div className="w-px h-4 bg-white/10 shrink-0 mx-0.5" />;
-
-    return (
-        <div
-            className="fixed z-10001 pointer-events-auto"
-            style={{ left: Math.max(8, rect.left), top: toolbarY }}
-        >
-            <div className="flex items-center gap-0.5 bg-[#1a1a1c]/95 border border-white/9 rounded-xl px-1.5 py-1 shadow-2xl shadow-black/60 backdrop-blur-sm">
-                {/* Duplicate */}
-                <button
-                    title="Duplicate (Cmd+D)"
-                    onClick={() => duplicateElement(elementId)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-zinc-300 hover:bg-white/10 hover:text-white transition-all select-none"
-                >
-                    <Copy size={12} /><span>Duplicate</span>
-                </button>
-                <Divider />
-                {/* Delete */}
-                <button
-                    title="Delete"
-                    onClick={() => { deleteElement(elementId); clearSelection(); }}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium text-red-400 hover:bg-red-500/15 hover:text-red-300 transition-all select-none"
-                >
-                    <Trash2 size={12} /><span>Delete</span>
-                </button>
-            </div>
-        </div>
-    );
-};
 
 // Multi-select align + distribute bar (shown when 2+ nodes selected)
 const AlignDistributeBar: React.FC<{
@@ -135,8 +89,11 @@ const AlignDistributeBar: React.FC<{
 
     if (!bboxEl || selectedIds.size < 2) return null;
     const rect = bboxEl.getBoundingClientRect();
-    const toolbarY = rect.top - TOOLBAR_H - TOOLBAR_GAP;
-    if (toolbarY < 4) return null;
+    // Prefer above; fall back to below the bbox when it would clip above viewport.
+    const toolbarAboveY = rect.top - TOOLBAR_H - TOOLBAR_GAP;
+    const toolbarBelowY = rect.bottom + TOOLBAR_GAP;
+    const toolbarY      = toolbarAboveY >= 4 ? toolbarAboveY : toolbarBelowY;
+    if (toolbarY + TOOLBAR_H > window.innerHeight - 4) return null;
 
     const getBBox = () => {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -387,7 +344,15 @@ export const Canvas = () => {
     useEffect(() => {
         const onMove = (e: PointerEvent) => {
             if (isPanning && !previewMode) setPan(p => ({ x: p.x + e.movementX, y: p.y + e.movementY }));
-            if (interaction) handleInteractionMove(e);
+            // Only call handleInteractionMove for multi-select group MOVE (itemIds present)
+            // and for RESIZE (which always routes through EditorContext).
+            // Single-node MOVE is handled by RenderNode's own onPointerMove — calling
+            // handleInteractionMove here too causes a double-write with a wrong delta (startX=0).
+            if (interaction) {
+                const isGroupMove = interaction.type === 'MOVE' && !!(interaction as any).itemIds;
+                const isResize    = interaction.type === 'RESIZE';
+                if (isGroupMove || isResize) handleInteractionMove(e);
+            }
         };
         const onUp = () => {
             if (interaction) {
@@ -776,7 +741,7 @@ export const Canvas = () => {
                     h: number;
                 }
 
-                const collectAbsoluteNodesWithWorldCoords = (
+                const collectSelectableNodesWithWorldCoords = (
                     ids: string[],
                     offsetX: number,
                     offsetY: number,
@@ -790,30 +755,44 @@ export const Canvas = () => {
                         if (!node) continue;
                         const st = (node.props?.style || {}) as Record<string, any>;
                         const isAbsolute = st.position === 'absolute';
-                        const localLeft = isAbsolute ? parseFloat(String(st.left ?? '0')) : 0;
-                        const localTop = isAbsolute ? parseFloat(String(st.top ?? '0')) : 0;
-                        const worldX = offsetX + localLeft;
-                        const worldY = offsetY + localTop;
+
                         if (isAbsolute) {
-                            const w = parseFloat(String(st.width ?? '0'));
-                            const h = parseFloat(String(st.height ?? '0'));
+                            // Fast path — world coords from data model.
+                            const localLeft = parseFloat(String(st.left ?? '0'));
+                            const localTop  = parseFloat(String(st.top  ?? '0'));
+                            const worldX = offsetX + localLeft;
+                            const worldY = offsetY + localTop;
+                            const w = parseFloat(String(st.width  ?? '0'));
+                            const h = parseFloat(String(st.height ?? st.minHeight ?? '0'));
                             if (w > 0 || h > 0) result.push({ id, worldX, worldY, w, h });
-                        }
-                        if (node.children?.length) {
-                            // canvas-mode children are offset relative to this node's world pos;
-                            // flex-mode children are flow-positioned — pass parent offset unchanged.
-                            const childOffsetX = isAbsolute ? worldX : offsetX;
-                            const childOffsetY = isAbsolute ? worldY : offsetY;
-                            result.push(...collectAbsoluteNodesWithWorldCoords(
-                                node.children, childOffsetX, childOffsetY, visited
-                            ));
+                            if (node.children?.length) {
+                                result.push(...collectSelectableNodesWithWorldCoords(node.children, worldX, worldY, visited));
+                            }
+                        } else {
+                            // Relative/flow-positioned nodes (AI sections, FRAME-1).
+                            // Read position from the DOM and convert to world space using current pan/zoom.
+                            const domEl = document.querySelector(`[data-vid="${id}"]`) as HTMLElement | null;
+                            if (domEl && canvasRef.current) {
+                                const canvasRect = canvasRef.current.getBoundingClientRect();
+                                const elRect     = domEl.getBoundingClientRect();
+                                // Convert screen coordinates to world coordinates (inverse of canvas transform).
+                                const worldX = (elRect.left - canvasRect.left - pan.x) / zoom;
+                                const worldY = (elRect.top  - canvasRect.top  - pan.y) / zoom;
+                                const w = elRect.width  / zoom;
+                                const h = elRect.height / zoom;
+                                if (w > 0 || h > 0) result.push({ id, worldX, worldY, w, h });
+                            }
+                            // Always recurse into children of flow nodes.
+                            if (node.children?.length) {
+                                result.push(...collectSelectableNodesWithWorldCoords(node.children, offsetX, offsetY, visited));
+                            }
                         }
                     }
                     return result;
                 };
 
                 const pageRoot = elements[activePageId];
-                const allCandidates = collectAbsoluteNodesWithWorldCoords(
+                const allCandidates = collectSelectableNodesWithWorldCoords(
                     pageRoot?.children || [], 0, 0
                 );
                 const hits = allCandidates.filter(({ worldX, worldY, w, h }) =>
@@ -999,13 +978,8 @@ export const Canvas = () => {
             {!previewMode && <FramePicker onAddFrame={addFrame} />}
 
             {/* ── TOOLBAR-1 [PERMANENT]: Floating toolbars — fixed, outside world div, never scale with zoom.
-                Single-node toolbar: Duplicate + Delete for selected non-artboard nodes.
-                Multi-select bar:    Align (6) + Distribute (2) when selectedIds.size ≥ 2.
-                Hidden during interaction, previewMode, or nothing selected.        */}
-            {!previewMode && !interaction && _sid && selectedIds.size <= 1 && (() => {
-                const domEl = document.querySelector(`[data-vid="${_sid}"]`) as HTMLElement | null;
-                return <SingleNodeToolbar elementId={_sid} nodeEl={domEl} />;
-            })()}
+                Single-node toolbar: rendered as a portal by RenderNode for the selected node (Bug 4 fix).
+                Multi-select bar:    Align (6) + Distribute (2) when selectedIds.size ≥ 2.        */}
             {!previewMode && !interaction && selectedIds.size >= 2 && (() => {
                 const bboxDom = document.querySelector('[data-multisel-bbox]') as HTMLElement | null;
                 return <AlignDistributeBar selectedIds={selectedIds} bboxEl={bboxDom} />;

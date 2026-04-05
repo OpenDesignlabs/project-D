@@ -151,6 +151,18 @@ export const ContainerPreview = () => {
         customEls.map(el => compileComponent(stripAndFixCode(el.code as string)))
       );
 
+      // Extract per-section sidebar style overrides so preview reflects the
+      // same background/color/padding/radius changes the Design tab applies.
+      // These keys mirror the OVERRIDE_KEYS in useFileSync Section A.
+      const OVERRIDE_KEYS = ['backgroundColor', 'color', 'padding', 'borderRadius'];
+      const sectionStyleOverrides = customEls.map((el: any) => {
+        const s = (el.props?.style as Record<string, any>) ?? {};
+        const overrides: Record<string, any> = {};
+        OVERRIDE_KEYS.forEach(k => { if (s[k]) overrides[k] = s[k]; });
+        return overrides;
+      });
+      const sectionStylesJson = JSON.stringify(sectionStyleOverrides);
+
       let finalCode: string;
 
       if (compiledParts.length === 1) {
@@ -192,12 +204,21 @@ var __valid_sections = __section_captures.filter(function(s) {
   return typeof s === 'function';
 });
 
+// Per-section sidebar style overrides — interpolated from TypeScript scope at compile time.
+var __section_styles = ${sectionStylesJson};
+
 exports['default'] = function VectraPage(props) {
   return React.createElement(
     'div',
     { style: { width: '100%', display: 'flex', flexDirection: 'column', minHeight: '100vh' } },
     __valid_sections.map(function(Section, i) {
-      return React.createElement(Section, { key: i });
+      var overrides = __section_styles[i] || {};
+      var wrapStyle = Object.assign({ width: '100%' }, overrides);
+      return React.createElement(
+        'div',
+        { key: i, style: wrapStyle },
+        React.createElement(Section, null)
+      );
     })
   );
 };

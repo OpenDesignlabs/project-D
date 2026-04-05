@@ -46,6 +46,49 @@ const toPascalCase = (raw: string): string => {
 };
 
 /**
+ * wrapCodeWithStyleDiv
+ * ─────────────────────
+ * Wraps an AI section's export default function in a styled div so sidebar
+ * overrides (backgroundColor, color, padding, borderRadius) appear in both
+ * the live VFS preview AND the ZIP export without touching the AI code.
+ *
+ * Strategy: rename the original export to __Inner, re-export a wrapper that
+ * renders __Inner inside a div with the override styles.
+ *
+ * Constraints:
+ * - Only modifies the `export default function` line — never touches internals.
+ * - Falls back to rawCode unchanged if no export default function found (safe).
+ * - C-1 compliant: creates a new string, never mutates in-place.
+ */
+const wrapCodeWithStyleDiv = (
+  rawCode: string,
+  styleOverrides: Record<string, any>,
+  componentName: string
+): string => {
+  const exportMatch = rawCode.match(/export\s+default\s+function\s+(\w+)/);
+  if (!exportMatch) return rawCode; // safe fallback — no export found
+
+  const originalName = exportMatch[1];
+  const renamedCode = rawCode.replace(
+    /export\s+default\s+function\s+(\w+)/,
+    `function __Inner${originalName}`
+  );
+
+  const styleJson = JSON.stringify(styleOverrides);
+
+  return `${renamedCode}
+
+export default function ${componentName}(props) {
+  return (
+    <div style={Object.assign({}, ${styleJson}, { width: '100%' })}>
+      <__Inner${originalName} {...props} />
+    </div>
+  );
+}
+`;
+};
+
+/**
  * wrapWithImports — Next.js variant
  * 'use client' is the first line (required for App Router).
  */
@@ -57,7 +100,7 @@ const wrapWithImportsNext = (rawCode: string): string => {
   }
   return `'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
 import * as Lucide from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -77,7 +120,7 @@ const wrapWithImportsVite = (rawCode: string): string => {
   if (wasm?.wrap_component_vite) {
     try { return wasm.wrap_component_vite(rawCode) as string; } catch { /* fall through */ }
   }
-  return `import React, { useState, useEffect, useRef } from 'react';
+  return `import React, { useState, useEffect, useRef, useCallback, useMemo, useReducer } from 'react';
 import * as Lucide from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -286,9 +329,24 @@ export const useFileSync = () => {
             // Update name tracking regardless of dirty-check below.
             prevCodeNodeNamesRef.current.set(nodeId, componentName);
 
+            // ── Sidebar style override wiring ────────────────────────────────────
+            // backgroundColor/color/padding/borderRadius set via the Design tab or
+            // AI tab visual overrides live in currentNode.props.style. We wrap the
+            // component's export in a styled div so overrides survive both the live
+            // preview and ZIP export — the AI code itself is never modified (EXPORT-2).
+            const sidebarStyle = (currentNode.props?.style as Record<string, any>) ?? {};
+            const OVERRIDE_KEYS = ['backgroundColor', 'color', 'padding', 'borderRadius'];
+            const styleOverrides: Record<string, any> = {};
+            OVERRIDE_KEYS.forEach(k => { if (sidebarStyle[k]) styleOverrides[k] = sidebarStyle[k]; });
+            const hasOverrides = Object.keys(styleOverrides).length > 0;
+
+            const baseCode = hasOverrides
+              ? wrapCodeWithStyleDiv(currentNode.code, styleOverrides, componentName)
+              : currentNode.code;
+
             const content = isNext
-              ? wrapWithImportsNext(currentNode.code)
-              : wrapWithImportsVite(currentNode.code);
+              ? wrapWithImportsNext(baseCode)
+              : wrapWithImportsVite(baseCode);
 
             if (syncedFiles.current.get(filePath) !== content) {
               await writeFile(filePath, content);

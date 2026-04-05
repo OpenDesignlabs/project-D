@@ -1,4 +1,4 @@
-﻿import type { VectraProject, VectraNode, Page, DataSource, ApiRoute } from '../../types';
+import type { VectraProject, VectraNode, Page, DataSource, ApiRoute } from '../../types';
 
 export interface GeneratedFileMap {
   files: Record<string, string>;
@@ -1239,11 +1239,19 @@ export default function Error({
 `;
 
 
-// Generates the full file map for a Next.js project. Equivalent of generateProjectCode() for the Next.js App Router.
+// Generates the full file map for a Next.js project ZIP export.
+// Equivalent of generateProjectCode() for the Next.js App Router.
+// ── Bug fixes shipped in this version ─────────────────────────────────────────
+// E1: Caller (Header) now routes to this function for framework==='nextjs'.
+// E2: custom_code nodes emit their component files to components/<Name>.tsx.
+// E3: All infrastructure files (package.json, tsconfig, tailwind, etc.) added.
+// E4: generateRootLayout() called with zipMode:true → active tokens.css import.
+// E5: API route files emitted to app/api/<path>/route.ts.
 export const generateNextProjectCode = (
   project: VectraProject,
   pages: Page[],
-  _dataSources: DataSource[] = []
+  _dataSources: DataSource[] = [],
+  apiRoutes: ApiRoute[] = []
 ): GeneratedFileMap => {
   const files: Record<string, string> = {};
   const allDependencies = new Set<string>([
@@ -1252,24 +1260,221 @@ export const generateNextProjectCode = (
     'clsx', 'tailwind-merge',
   ]);
 
-  // Deduplicate slugs before generating paths.
-  // Prevents silent file overwrites in the ZIP when two pages share a slug.
   const safePages = deduplicatePageSlugs(pages);
 
+  // ── 1. Page files ──────────────────────────────────────────────────────────
   safePages.forEach(page => {
-    const filePath = slugToNextPath(page.slug);
-    files[filePath] = generateNextPage(page, project);
+    files[slugToNextPath(page.slug)] = generateNextPage(page, project);
   });
 
-  files['app/layout.tsx'] = generateRootLayout(safePages);
+  // ── 2. Root layout — zipMode:true activates tokens.css import (E4 fix) ────
+  files['app/layout.tsx'] = generateRootLayout(safePages, undefined, true);
 
+  // ── 3. Multi-page navbar ───────────────────────────────────────────────────
   if (safePages.length > 1) {
     files['components/Navbar.tsx'] = generateNextNavbar(safePages);
   }
 
-  // Standard Next.js App Router conventions. loading.tsx — Suspense boundary UI (server component, pure spinner). error.tsx   — Error boundary (must be 'use client' per Next.js requirement)
+  // ── 4. Next.js convention files ────────────────────────────────────────────
   files['app/loading.tsx'] = NEXT_LOADING_TSX;
   files['app/error.tsx'] = NEXT_ERROR_TSX;
+
+  // ── 5. COMPONENT FILES (E2 fix) ────────────────────────────────────────────
+  // Walk every page and collect every custom_code node. Write each as
+  // components/<PascalName>.tsx with 'use client' directive.
+  // Deduplication: a component used on multiple pages is only written once.
+  const writtenComponents = new Set<string>();
+
+  safePages.forEach(page => {
+    const pageRoot = project[page.rootId];
+    if (!pageRoot) return;
+
+    // Find the canvas frame (webpage node)
+    const canvasFrameId = pageRoot.children?.find(
+      (cid: string) => project[cid]?.type === 'webpage'
+    ) ?? pageRoot.children?.[0];
+    if (!canvasFrameId) return;
+
+    const entries = collectCustomCodeNodes(project, canvasFrameId);
+    entries.forEach(({ node }) => {
+      const compName = toPascalCaseGen(node.name?.trim() || node.id);
+      if (writtenComponents.has(compName)) return;
+      writtenComponents.add(compName);
+
+      const rawCode = (node.code as string | undefined) ?? '';
+      // Ensure 'use client' is present — all interactive sections must be client components.
+      const needsDirective = !rawCode.trimStart().startsWith("'use client'")
+                          && !rawCode.trimStart().startsWith('"use client"');
+      const componentCode = needsDirective ? `'use client';\n\n${rawCode}` : rawCode;
+      files[`components/${compName}.tsx`] = componentCode;
+    });
+  });
+
+  // ── 6. Shared lib ──────────────────────────────────────────────────────────
+  files['lib/utils.ts'] = `import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+`;
+
+  // ── 7. API routes (E5 fix) ─────────────────────────────────────────────────
+  apiRoutes.forEach(route => {
+    const cleanPath = route.path.replace(/^\/+/, '').replace(/\/+$/, '').trim() || 'unnamed';
+    files[`app/api/${cleanPath}/route.ts`] = generateApiRouteFile(route);
+  });
+
+  // ── 8. Infrastructure files (E3 fix) ──────────────────────────────────────
+  files['package.json'] = JSON.stringify({
+    name: 'vectra-app',
+    version: '0.1.0',
+    private: true,
+    scripts: {
+      dev: 'next dev',
+      build: 'next build',
+      start: 'next start',
+      lint: 'next lint',
+    },
+    dependencies: {
+      next: '14.2.5',
+      react: '^18.3.1',
+      'react-dom': '^18.3.1',
+      'lucide-react': '^0.263.1',
+      'framer-motion': '^10.16.4',
+      clsx: '^2.0.0',
+      'tailwind-merge': '^2.0.0',
+    },
+    devDependencies: {
+      '@types/node': '^20',
+      '@types/react': '^18',
+      '@types/react-dom': '^18',
+      tailwindcss: '^3.4.1',
+      postcss: '^8',
+      autoprefixer: '^10.0.1',
+      typescript: '^5',
+    },
+  }, null, 2);
+
+  files['tsconfig.json'] = JSON.stringify({
+    compilerOptions: {
+      lib: ['dom', 'dom.iterable', 'esnext'],
+      allowJs: true,
+      skipLibCheck: true,
+      strict: true,
+      noEmit: true,
+      esModuleInterop: true,
+      module: 'esnext',
+      moduleResolution: 'bundler',
+      resolveJsonModule: true,
+      isolatedModules: true,
+      jsx: 'preserve',
+      incremental: true,
+      plugins: [{ name: 'next' }],
+      paths: { '@/*': ['./*'] },
+    },
+    include: ['next-env.d.ts', '**/*.ts', '**/*.tsx', '.next/types/**/*.ts'],
+    exclude: ['node_modules'],
+  }, null, 2);
+
+  files['tailwind.config.js'] = `/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: 'class',
+  content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+`;
+
+  files['postcss.config.js'] = `module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+`;
+
+  files['next.config.js'] = `/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**' },
+      { protocol: 'http', hostname: '**' },
+    ],
+  },
+  poweredByHeader: false,
+};
+
+module.exports = nextConfig;
+`;
+
+  files['app/globals.css'] = `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: #3b82f6;
+    --secondary: #8b5cf6;
+    --accent: #ec4899;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: #000000;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1a1a1a; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #52525b; }
+`;
+
+  files['app/tokens.css'] = `/* Vectra Design Tokens — customise to match your brand */
+:root {
+  --primary:   #3b82f6;
+  --secondary: #8b5cf6;
+  --accent:    #ec4899;
+  --dark:      #1e293b;
+}
+`;
+
+  files['.gitignore'] = `# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+
+# Production
+build/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Misc
+.DS_Store
+*.pem
+`;
+
+  files['.env.local'] = `# Environment variables for your Vectra app
+# Add your secrets here — this file is gitignored
+`;
 
   return { files, dependencies: allDependencies };
 };

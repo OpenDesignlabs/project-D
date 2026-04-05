@@ -47,7 +47,7 @@ app.route('/api/marketplace',  marketplaceRoute);
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT ?? '3002', 10);
 
-serve({ fetch: app.fetch, port: PORT }, () => {
+const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`\n🚀 Vectra Server running on http://localhost:${PORT}`);
   console.log(`   AI primary:     ${process.env.AI_PRIMARY_MODEL  ?? 'zai-org/GLM-5:zai-org'}`);
   console.log(`   AI debugger:    ${process.env.AI_DEBUGGER_MODEL ?? 'deepseek-ai/DeepSeek-R1-0528:together'}`);
@@ -55,5 +55,7 @@ serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`   Supabase:       ${process.env.SUPABASE_URL ? '✅ configured' : '⚠️  SUPABASE_URL not set'}`);
   console.log(`   Auth:           ${SERVER_SECRET ? '✅ secret set' : '⚠️  open (no secret)'}\n`);
 });
+
+(server as any).timeout = 600_000;
 
 export default app;

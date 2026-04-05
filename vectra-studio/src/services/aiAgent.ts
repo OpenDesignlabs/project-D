@@ -482,9 +482,9 @@ export default function Navbar(props) {
 // SECTION: HeroSection
 export default function HeroSection(props) {
   return (
-    <section className="w-full min-h-[700px] bg-linear-to-br from-slate-950 via-indigo-950/20 to-black flex flex-col items-center justify-center px-8 py-24 text-white">
+    <section className="w-full min-h-[700px] bg-gradient-to-br from-slate-950 via-indigo-950/20 to-black flex flex-col items-center justify-center px-8 py-24 text-white">
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="text-center">
-        <h1 className="text-6xl md:text-7xl font-black tracking-tight mb-6">Build <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-violet-400">Faster.</span></h1>
+        <h1 className="text-6xl md:text-7xl font-black tracking-tight mb-6">Build <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">Faster.</span></h1>
         <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-10">The visual platform for teams who ship quality products.</p>
         <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
           <button className="px-8 py-4 bg-blue-600 rounded-xl text-white font-bold text-lg hover:bg-blue-500 transition-all">Start Free Trial</button>
@@ -509,7 +509,8 @@ export default function FeaturesSection(props) {
         <h2 className="text-4xl font-black text-center mb-16">Everything you need</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((f, i) => {
-            const IC = Lucide[f.icon] || Lucide.Star;
+            // CORRECT dynamic icon pattern — always validate before JSX (Issue 5 fix)
+            const IC = (Lucide[f.icon] && typeof Lucide[f.icon] === 'function') ? Lucide[f.icon] : Lucide.Star;
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} viewport={{ once: true }}
                 className="p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-white/20 transition-all">
@@ -528,7 +529,7 @@ export default function FeaturesSection(props) {
 // SECTION: CTASection
 export default function CTASection(props) {
   return (
-    <section className="w-full py-24 bg-linear-to-br from-blue-950/50 to-slate-950 border-y border-white/10 text-white text-center px-8">
+    <section className="w-full py-24 bg-gradient-to-br from-blue-950/50 to-slate-950 border-y border-white/10 text-white text-center px-8">
       <h2 className="text-5xl font-black mb-6">Ready to ship?</h2>
       <p className="text-slate-400 text-xl max-w-xl mx-auto mb-10">Join thousands of teams. Free to start.</p>
       <button className="px-10 py-4 bg-blue-600 rounded-xl text-white font-bold text-lg hover:bg-blue-500 transition-all">Start for free</button>
@@ -603,7 +604,14 @@ REACT RULES — ALL REQUIRED
 - NO import statements. React, motion, Lucide, cn are globally injected.
 - Icons — dot notation ONLY: <Lucide.Sparkles />
   FATAL: NEVER <Icon="Name" /> or <Lucide[name] /> in JSX.
-  Dynamic icons: const IC = Lucide[item.icon] || Lucide.Star; return <IC />;
+  Dynamic icons: ALWAYS assign to a const before using in JSX:
+  ✅ const IC = (typeof Lucide[item.icon] === 'function' ? Lucide[item.icon] : null) || Lucide.Star; return <IC />;
+  ❌ const IC = Lucide[item.icon] || Lucide.Star;  ← no type-check, undefined crashes renderer
+  NEVER skip the fallback — undefined renders as a blank section.
+- Tailwind gradients: ALWAYS bg-gradient-to-* (Tailwind v3 syntax).
+  NEVER bg-linear-to-* — that is Tailwind v4 and breaks the ZIP export.
+  ✅ bg-gradient-to-br from-slate-950 to-black
+  ❌ bg-linear-to-br from-slate-950 to-black
 - Tailwind: standard utilities or arbitrary values bg-[#0f172a]. NEVER bg-primary.
 - Framer Motion: animate ONLY opacity/scale/x/y/rotate. Glow: whileHover={{ boxShadow: '0 0 32px #3b82f6' }}
 - Section roots MUST use w-full. NEVER position:absolute on section roots.

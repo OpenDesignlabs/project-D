@@ -122,6 +122,8 @@ export const RightSidebar = () => {
     const [animScope, setAnimScope] = useState<'single' | 'all'>('single');
     // Tracks drag state so history is skipped during slider movement and committed once on pointerUp.
     const isSliderDragging = useRef(false);
+    // Polish 3: ref for the element name input so vectra:focus-name-field can drive focus.
+    const nameInputRef = useRef<HTMLInputElement>(null);
 
     // Local state for glassmorphism effects
     const [blur, setBlur] = useState(0);
@@ -152,6 +154,22 @@ export const RightSidebar = () => {
     const [fillModeOverride, setFillModeOverride] = useState<FillMode | null>(null);
     const fillMode = fillModeOverride ?? derivedFillMode;
     useEffect(() => { setFillModeOverride(null); }, [element?.id]);
+
+    // Polish 3: focus + select the name input when any canvas node is double-clicked.
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const ev = e as CustomEvent<{ elementId: string }>;
+            // Only focus if this sidebar is currently showing that element.
+            if (ev.detail?.elementId !== selectedId) return;
+            // Small rAF so the sidebar has re-rendered with the correct element before we focus.
+            requestAnimationFrame(() => {
+                nameInputRef.current?.focus();
+                nameInputRef.current?.select();
+            });
+        };
+        window.addEventListener('vectra:focus-name-field', handler);
+        return () => window.removeEventListener('vectra:focus-name-field', handler);
+    }, [selectedId]);
 
     // ENGINE v0.4: ColorEngine for WCAG contrast + color manipulation
     const colorEngine = useColorEngine();
@@ -241,18 +259,17 @@ export const RightSidebar = () => {
         };
     }, [localCode]);
 
-    // Auto-switches to the Code tab when a code node is selected; respects the user's manual tab choice thereafter.
+    // Auto-switches to the Design tab when a code node is selected so users have
+    // immediate access to the full style panel. AI and Code tabs remain reachable
+    // via the tab bar. (Issue 3 fix — previous 'ai' default locked users out of Design.)
     useEffect(() => {
         if (!element) return;
         if (element.id === prevElementIdRef.current) return;
         prevElementIdRef.current = element.id;
         const isCode = (element.type === 'custom_code' || element.type === 'custom_component') && !!element.code;
-        // FIX-SIDEBAR-1: Show AI tab for ALL custom_code nodes.
-        // aiSource nodes → AI tab (refine/regenerate). Others → AI tab (style overrides + edit).
-        // FIX-SIDEBAR-1: AI tab is the default for all custom_code nodes
-        // aiSource nodes → AI tab (refine/regenerate + visual overrides)
-        // plain custom_code → AI tab (visual overrides + generic refine)
-        if (isCode) { setActiveTab('ai'); return; }
+        // Switch to 'design' so the full property panel is visible immediately.
+        // Users can still switch to AI/Code tabs via the tab bar buttons.
+        if (isCode) { setActiveTab('design'); return; }
     }, [element?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Code Tab: commitCode ────────────────────────────────────────────────── declared HERE, before ALL early returns. useCallback must never appear after an early return — React counts hooks
@@ -549,6 +566,8 @@ export const RightSidebar = () => {
                 </div>
                 <div className="flex gap-2">
                     <input
+                        id="sidebar-name-input"
+                        ref={nameInputRef}
                         value={element.name}
                         onChange={(e) => updateProject({ ...elements, [element.id]: { ...element, name: e.target.value } })}
                         className="w-full bg-transparent text-sm font-bold text-white focus:bg-[#3d3d3d] px-1 rounded outline-none border border-transparent focus:border-[#007acc] transition-all"
@@ -558,6 +577,10 @@ export const RightSidebar = () => {
 
             {/* TABS */}
             <div className="flex border-b border-[#252526] bg-[#333333]">
+                {/* Primary tabs — always visible */}
+                <TabButton active={activeTab === 'design'} onClick={() => setActiveTab('design')} icon={Layout} label="Design" />
+                <TabButton active={activeTab === 'interact'} onClick={() => setActiveTab('interact')} icon={MousePointer2} label="Interact" />
+                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={Settings} label="Settings" />
                 {/* AI tab — shown for ALL custom_code nodes (aiSource or not) */}
                 {isCodeNode && (
                     <TabButton
@@ -585,9 +608,6 @@ export const RightSidebar = () => {
                         label="Props"
                     />
                 )}
-                <TabButton active={activeTab === 'design'} onClick={() => setActiveTab('design')} icon={Layout} label="Design" />
-                <TabButton active={activeTab === 'interact'} onClick={() => setActiveTab('interact')} icon={MousePointer2} label="Interact" />
-                <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={Settings} label="Settings" />
             </div>
 
             {/* Direction A: Breakpoint selector — hidden on code tab (sections own their responsive CSS) */}

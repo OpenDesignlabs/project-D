@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Store, Search, X, Plus, Check, ExternalLink,
   Loader2, AlertCircle, RefreshCw, ShieldCheck, Tag,
