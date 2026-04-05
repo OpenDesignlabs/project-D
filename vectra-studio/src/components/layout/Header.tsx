@@ -22,7 +22,7 @@ export const Header = () => {
         setSelectedId, selectedId,
         deleteElement, exitProject, setMagicBarOpen,
         pages, framework, setActivePanel,
-        projectId,
+        projectId, projectName,
         apiRoutes,          // E1/E5: passed to generateNextProjectCode for API route ZIP export
         realPageId, switchPage, addPage,
     } = useEditor();
@@ -104,14 +104,15 @@ export const Header = () => {
                 zip.file(path, content);
             }
             // README is added by Header, not the generators, so it's always present.
+            const displayName = projectName || projectId || 'vectra-app';
             zip.file('README.md',
-                `# ${projectId || 'vectra-app'}\n\nBuilt with [Vectra](https://vectra.dev).\n\n## Getting Started\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\nThen open [http://localhost:3000](http://localhost:3000).\n`);
+                `# ${displayName}\n\nBuilt with [Vectra](https://vectra.dev).\n\n## Getting Started\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\nThen open [http://localhost:3000](http://localhost:3000).\n`);
 
             const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${(projectId || 'vectra-app').replace(/\s+/g, '-').toLowerCase()}.zip`;
+            a.download = `${(displayName).replace(/\s+/g, '-').toLowerCase()}.zip`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
