@@ -165,7 +165,7 @@ const generateMotionProps = (props: any): string[] => {
   return motionAttributes;
 };
 
-const generateNodeCode = (nodeId: string, project: VectraProject, imports: ImportManager, depth: number): string => {
+const generateNodeCode = (nodeId: string, project: VectraProject, imports: ImportManager, depth: number, framework: 'next' | 'vite' = 'vite'): string => {
   const node = project[nodeId];
   if (!node) return '';
   const indent = '  '.repeat(depth);
@@ -257,7 +257,7 @@ const generateNodeCode = (nodeId: string, project: VectraProject, imports: Impor
 
   let childrenCode = '';
   if (node.children && !isComponent) {
-    childrenCode = node.children.map((cid: string) => generateNodeCode(cid, project, imports, depth + 1)).join('');
+    childrenCode = node.children.map((cid: string) => generateNodeCode(cid, project, imports, depth + 1, framework)).join('');
   }
 
   const propsStr = props.length ? ' ' + props.join(' ') : '';
@@ -275,10 +275,16 @@ const generateNodeCode = (nodeId: string, project: VectraProject, imports: Impor
     }
   }
 
-  // Internal page navigation: React Router Link. '__external__' sentinel means props.href is the real URL — skip Link wrapping.
+  // X7 FIX: Internal page navigation — use next/link for Next.js, react-router-dom for Vite.
+  // '__external__' sentinel means props.href is a real URL — skip Link wrapping entirely.
   if (node.props.linkTo && node.props.linkTo !== '__external__') {
-    imports.add('react-router-dom', 'Link');
-    return `${indent}<Link to="${node.props.linkTo}" className="contents">\n${code}${indent}</Link>\n`;
+    if (framework === 'next') {
+      imports.add('next/link', 'default:Link');
+      return `${indent}<Link href="${node.props.linkTo}" className="contents">\n${code}${indent}</Link>\n`;
+    } else {
+      imports.add('react-router-dom', 'Link');
+      return `${indent}<Link to="${node.props.linkTo}" className="contents">\n${code}${indent}</Link>\n`;
+    }
   }
 
   // External URL — wrap in a standard <a> tag. target="_blank" always gets rel="noopener noreferrer" (security best practice). className="contents" preserves the child element's layout identity
@@ -682,7 +688,7 @@ export const generateGridPage = (
     // Build one coherent patched copy for this subtree. All descendants with placement entries get gridColumn/gridRow. All other descendants are identity-cloned (no allocation)
     const patchedProject = deepPatchProjectForGrid(project, childId, placementMap);
 
-    return generateNodeCode(childId, patchedProject, imports, 3);
+    return generateNodeCode(childId, patchedProject, imports, 3, framework === 'nextjs' ? 'next' : 'vite');
   }).join('');
 
   const importBlock = framework === 'nextjs'
@@ -966,7 +972,7 @@ export const generateNextPage = (
     }
 
     // ── CASE C: Non-custom_code node — inline JSX via generateNodeCode ────
-    const inlineJsx = generateNodeCode(childId, project, imports, 4);
+    const inlineJsx = generateNodeCode(childId, project, imports, 4, 'next');
     if (inlineJsx.trim()) {
       jsxParts.push(inlineJsx.trimEnd());
     }
