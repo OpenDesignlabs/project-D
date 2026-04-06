@@ -96,7 +96,9 @@ const LoadingScreen = ({ message = "INITIALIZING ENVIRONMENT" }) => (
 
 const EditorLayout = () => {
   const { history, deleteElement, duplicateElement, selectedId, setSelectedId, setActivePanel,
-          elementsRef, updateProject, pushHistory, projectName, importPage, parentMap } = useEditor();
+          elementsRef, updateProject, pushHistory, projectName, importPage, parentMap,
+          runAI   // ← template auto-generation (P3A)
+  } = useEditor();
   const { selectedIds, clearSelection, addToSelection } = useUI();
   const { status } = useContainer();
 
@@ -114,8 +116,48 @@ const EditorLayout = () => {
   // handler knows to commit one history entry. Ref (not state) — zero re-renders.
   const nudgeActiveRef = useRef(false);
 
+  // Fires the initial AI prompt for template-based projects exactly once.
+  const initialPromptFiredRef = useRef(false);
+
   useFileSync();
   useAssetSync();
+
+  // ── TEMPLATE AUTO-GENERATION ──────────────────────────────────────────────
+  // Dashboard writes a prompt to sessionStorage when the user picks a non-blank
+  // template. We consume it exactly once, after the VFS is ready.
+  //
+  // Guards:
+  // 1. initialPromptFiredRef — prevents StrictMode double-invoke and re-mount fires
+  // 2. status === 'ready' — VFS must be mounted before runAI touches useFileSync
+  // 3. isEmpty — skip if the user has returned to an existing project with content
+  // 4. sessionStorage key cleared before runAI — even if runAI throws, key is gone
+  useEffect(() => {
+    if (status !== 'ready') return;
+    if (initialPromptFiredRef.current) return;
+
+    const prompt = sessionStorage.getItem('vectra_initial_prompt');
+    if (!prompt) return;
+
+    // Detect empty canvas: the desktop frame has no children
+    const frameDesktop = Object.values(elementsRef.current).find(
+      el => el.type === 'webpage'
+    );
+    const isEmpty = !frameDesktop?.children?.length;
+    if (!isEmpty) return;
+
+    // Mark fired BEFORE the async call — prevents double-invoke on StrictMode
+    initialPromptFiredRef.current = true;
+    sessionStorage.removeItem('vectra_initial_prompt');
+
+    // Small delay so the editor shell fully renders before the AI overlay appears
+    setTimeout(() => {
+      runAI(prompt).catch(err =>
+        console.warn('[Vectra] Template auto-generation failed:', err)
+      );
+    }, 600);
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Intentional: elementsRef and runAI are stable refs. status is the only
+  // reactive trigger — we only want this to fire when VFS transitions to ready.
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

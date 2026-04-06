@@ -259,13 +259,11 @@ exports['default'] = function VectraPage(props) {
   );
 
   // ── Layout classes ────────────────────────────────────────────────────────
-  const outerClasses = previewMode
-    ? 'fixed inset-0 z-[200] bg-[#09090b] flex flex-col'
-    : 'absolute bottom-6 right-6 w-[400px] h-[280px] bg-[#09090b] rounded-xl shadow-2xl border border-white/10 flex flex-col overflow-hidden transition-all duration-300 hover:shadow-blue-900/20 hover:border-blue-500/20';
+  // ContainerPreview is now always rendered as the mini editor widget.
+  // Canvas owns full-canvas preview (P3B) — previewMode branch moved there.
+  const outerClasses = 'absolute bottom-6 right-6 w-[400px] h-[280px] bg-[#09090b] rounded-xl shadow-2xl border border-white/10 flex flex-col overflow-hidden transition-all duration-300 hover:shadow-blue-900/20 hover:border-blue-500/20';
 
-  const toolbarClasses = previewMode
-    ? 'h-12 border-b border-white/10 bg-zinc-900/80 backdrop-blur'
-    : 'h-9 border-b border-white/5 bg-zinc-900/60 backdrop-blur';
+  const toolbarClasses = 'h-9 border-b border-white/5 bg-zinc-900/60 backdrop-blur';
 
   return (
     <div className={outerClasses}>
