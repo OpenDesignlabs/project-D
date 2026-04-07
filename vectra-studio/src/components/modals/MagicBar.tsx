@@ -41,6 +41,33 @@ const MODEL_OPTIONS = [
         provider: 'local',
         icon:     'Cpu',
     },
+    {
+        id:       'qwen3',
+        label:    'Qwen 3 Coder',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:qwen3-coder:30b-cloud',
+        color:    '#14b8a6',  // teal
+        provider: 'local',
+        icon:     'Cpu',
+    },
+    {
+        id:       'gptoss',
+        label:    'GPT-OSS 120B',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:gpt-oss:120b-cloud',
+        color:    '#f59e0b',  // amber
+        provider: 'local',
+        icon:     'Cpu',
+    },
+    {
+        id:       'kimi',
+        label:    'Kimi K2.5',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:kimi-k2.5:cloud',
+        color:    '#ec4899',  // pink
+        provider: 'local',
+        icon:     'Cpu',
+    },
 ] as const;
 
 type ModelId = typeof MODEL_OPTIONS[number]['id'];
