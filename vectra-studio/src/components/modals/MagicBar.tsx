@@ -43,9 +43,9 @@ const MODEL_OPTIONS = [
     },
     {
         id:       'qwen-coder',
-        label:    'Qwen Coder',
+        label:    'Qwen Coder 480B',
         sublabel: 'Ollama • Local',
-        model:    'ollama:qwen3-coder:30b-cloud',
+        model:    'ollama:qwen3-coder:480b-cloud',
         color:    '#f59e0b',  // amber
         provider: 'local',
         icon:     'Code2',
