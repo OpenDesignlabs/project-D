@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useEditor } from '../../context/EditorContext';
 import {
     Sparkles, ArrowRight, Loader2, CheckCircle2, XCircle, Zap,
-    CheckCircle, Bot, Cpu, Code2, Brain, Wind, ChevronUp, ChevronDown,
+    CheckCircle, Bot, Cpu, Code2, Brain, Wind, ChevronDown, Layers,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -69,31 +69,31 @@ const MODEL_OPTIONS = [
         icon:     'Wind',
     },
     {
-        id:       'qwen-coder-next',
+        id:       'qwen-next',
         label:    'Qwen Coder Next',
         sublabel: 'Ollama • Local',
         model:    'ollama:qwen3-coder-next:cloud',
-        color:    '#f59e0b',  // amber
+        color:    '#fb923c',  // orange
         provider: 'local',
         icon:     'Code2',
     },
     {
-        id:       'glm-cloud',
+        id:       'glm5-cloud',
         label:    'GLM-5 Cloud',
         sublabel: 'Ollama • Local',
         model:    'ollama:glm-5:cloud',
-        color:    '#3b82f6',  // blue
+        color:    '#06b6d4',  // cyan
         provider: 'local',
-        icon:     'Bot',
+        icon:     'Sparkles',
     },
     {
         id:       'minimax',
         label:    'MiniMax M2.7',
         sublabel: 'Ollama • Local',
         model:    'ollama:minimax-m2.7:cloud',
-        color:    '#10b981',  // emerald
+        color:    '#a78bfa',  // light violet
         provider: 'local',
-        icon:     'Brain',
+        icon:     'Layers',
     },
 ] as const;
 
@@ -279,7 +279,7 @@ export const MagicBar = () => {
     const [historyIdx, setHistoryIdx] = useState(-1);
     // Model selector
     const [selectedModelId, setSelectedModelId] = useState<ModelId>(getStoredModelId);
-    const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+    const [modelPickerOpen, setModelPickerOpen] = useState(false);
     // Per-stage timing
     const stageStartRef = useRef<number>(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -293,7 +293,7 @@ export const MagicBar = () => {
             setStreamCharCount(0);
             setStages(makeInitialStages());
             setHistoryIdx(-1);
-            setIsModelDropdownOpen(false);
+            setModelPickerOpen(false);
         }
     }, [isMagicBarOpen]);
 
@@ -554,81 +554,108 @@ export const MagicBar = () => {
                             </button>
                         </div>
 
-                        {/* Model selector — bottom-left, shown only when idle */}
-                        {status === 'idle' && (
-                            <div className="absolute bottom-3 left-3 flex flex-col gap-2">
-                                <AnimatePresence>
-                                    {isModelDropdownOpen && (
+                        {/* Model picker — bottom-left, collapsible */}
+                        {status === 'idle' && (() => {
+                            const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind, Layers, Sparkles };
+                            const activeOpt = MODEL_OPTIONS.find(m => m.id === selectedModelId) ?? MODEL_OPTIONS[0];
+                            const ActiveIcon = iconMap[activeOpt.icon] ?? Cpu;
+                            return (
+                                <div className="absolute bottom-3 left-3">
+                                    {/* Picker panel — opens upward */}
+                                    {modelPickerOpen && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            initial={{ opacity: 0, y: 6, scale: 0.97 }}
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            exit={{ opacity: 0, y: 6, scale: 0.97 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute bottom-full left-0 mb-2 w-48 bg-[#18181b] border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col z-50 p-1"
+                                            className="absolute bottom-full left-0 mb-2 w-[340px] bg-[#111113] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
                                         >
-                                            <div className="px-2 py-1.5 text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
-                                                Select Model
+                                            {/* Header */}
+                                            <div className="px-3 py-2 border-b border-white/5 flex items-center gap-2">
+                                                <Sparkles size={10} className="text-zinc-600" />
+                                                <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Select AI Model</span>
                                             </div>
-                                            {MODEL_OPTIONS.map(opt => {
-                                                const isActive = opt.id === selectedModelId;
-                                                const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind };
-                                                const Icon = iconMap[opt.icon] ?? Cpu;
-                                                return (
-                                                    <button
-                                                        key={opt.id}
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setSelectedModelId(opt.id);
-                                                            setIsModelDropdownOpen(false);
-                                                            try { localStorage.setItem(MODEL_KEY, opt.model); } catch { /* ignore */ }
-                                                        }}
-                                                        className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all text-left ${
-                                                            isActive
-                                                                ? 'bg-white/10 text-white'
-                                                                : 'text-zinc-400 hover:text-white hover:bg-white/5'
-                                                        }`}
-                                                    >
-                                                        <Icon size={12} style={{ color: opt.color }} className="shrink-0" />
-                                                        <div className="flex flex-col">
-                                                            <span>{opt.label}</span>
-                                                            <span className="text-[9px] text-zinc-600 font-mono pt-0.5" style={{ color: isActive ? 'rgba(255,255,255,0.4)' : undefined }}>
+                                            {/* Model grid */}
+                                            <div className="grid grid-cols-3 gap-1 p-2">
+                                                {MODEL_OPTIONS.map(opt => {
+                                                    const isActive = opt.id === selectedModelId;
+                                                    const Icon = iconMap[opt.icon] ?? Cpu;
+                                                    return (
+                                                        <button
+                                                            key={opt.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedModelId(opt.id);
+                                                                setModelPickerOpen(false);
+                                                                try { localStorage.setItem(MODEL_KEY, opt.model); } catch { /* ignore */ }
+                                                            }}
+                                                            style={isActive ? {
+                                                                borderColor: opt.color + '55',
+                                                                background:  opt.color + '15',
+                                                            } : {}}
+                                                            className={`relative flex flex-col items-start gap-1 p-2 rounded-lg border text-left transition-all ${
+                                                                isActive
+                                                                    ? 'shadow-sm'
+                                                                    : 'border-white/5 hover:border-white/10 hover:bg-white/5'
+                                                            }`}
+                                                        >
+                                                            {/* Icon + active dot */}
+                                                            <div className="flex items-center justify-between w-full">
+                                                                <div
+                                                                    style={{ background: opt.color + '20', color: opt.color }}
+                                                                    className="w-6 h-6 rounded-md flex items-center justify-center"
+                                                                >
+                                                                    <Icon size={11} />
+                                                                </div>
+                                                                {isActive && (
+                                                                    <span
+                                                                        style={{ background: opt.color }}
+                                                                        className="w-1.5 h-1.5 rounded-full"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            {/* Name + sublabel */}
+                                                            <span
+                                                                style={isActive ? { color: opt.color } : {}}
+                                                                className={`text-[10px] font-bold leading-tight ${ isActive ? '' : 'text-zinc-400' }`}
+                                                            >
+                                                                {opt.label}
+                                                            </span>
+                                                            <span className="text-[8px] text-zinc-600 leading-tight">
                                                                 {opt.sublabel}
                                                             </span>
-                                                        </div>
-                                                        {isActive && (
-                                                            <CheckCircle size={12} className="ml-auto text-emerald-400 shrink-0" />
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </motion.div>
                                     )}
-                                </AnimatePresence>
 
-                                {(() => {
-                                    const activeOpt = MODEL_OPTIONS.find(m => m.id === selectedModelId) || MODEL_OPTIONS[0];
-                                    const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind };
-                                    const Icon = iconMap[activeOpt.icon] ?? Cpu;
-                                    return (
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                                            title={`Current Model: ${activeOpt.label}`}
-                                            style={{
-                                                borderColor: activeOpt.color + '60',
-                                                background: activeOpt.color + '18',
-                                                color: activeOpt.color,
-                                            }}
-                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all shadow-sm hover:shadow-md"
-                                        >
-                                            <Icon size={9} />
-                                            <span>{activeOpt.label}</span>
-                                            {isModelDropdownOpen ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
-                                        </button>
-                                    );
-                                })()}
-                            </div>
-                        )}
+                                    {/* Toggle button */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setModelPickerOpen(p => !p)}
+                                        style={modelPickerOpen ? {
+                                            borderColor: activeOpt.color + '50',
+                                            background:  activeOpt.color + '12',
+                                            color: activeOpt.color,
+                                        } : {}}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                            modelPickerOpen
+                                                ? ''
+                                                : 'border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700'
+                                        }`}
+                                    >
+                                        <ActiveIcon size={9} />
+                                        <span>{activeOpt.label}</span>
+                                        <ChevronDown
+                                            size={9}
+                                            className={`transition-transform duration-150 ${ modelPickerOpen ? 'rotate-180' : '' }`}
+                                        />
+                                    </button>
+                                </div>
+                            );
+                        })()}
                     </form>
 
                     {/* Live stage pipeline — shown during generation */}
