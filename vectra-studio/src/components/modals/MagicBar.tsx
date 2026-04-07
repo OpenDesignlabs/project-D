@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useEditor } from '../../context/EditorContext';
 import {
     Sparkles, ArrowRight, Loader2, CheckCircle2, XCircle, Zap,
-    CheckCircle, Bot, Cpu, Code2, Brain, Wind,
+    CheckCircle, Bot, Cpu, Code2, Brain, Wind, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -67,6 +67,33 @@ const MODEL_OPTIONS = [
         color:    '#ec4899',  // pink
         provider: 'local',
         icon:     'Wind',
+    },
+    {
+        id:       'qwen-coder-next',
+        label:    'Qwen Coder Next',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:qwen3-coder-next:cloud',
+        color:    '#f59e0b',  // amber
+        provider: 'local',
+        icon:     'Code2',
+    },
+    {
+        id:       'glm-cloud',
+        label:    'GLM-5 Cloud',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:glm-5:cloud',
+        color:    '#3b82f6',  // blue
+        provider: 'local',
+        icon:     'Bot',
+    },
+    {
+        id:       'minimax',
+        label:    'MiniMax M2.7',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:minimax-m2.7:cloud',
+        color:    '#10b981',  // emerald
+        provider: 'local',
+        icon:     'Brain',
     },
 ] as const;
 
@@ -252,6 +279,7 @@ export const MagicBar = () => {
     const [historyIdx, setHistoryIdx] = useState(-1);
     // Model selector
     const [selectedModelId, setSelectedModelId] = useState<ModelId>(getStoredModelId);
+    const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
     // Per-stage timing
     const stageStartRef = useRef<number>(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -265,6 +293,7 @@ export const MagicBar = () => {
             setStreamCharCount(0);
             setStages(makeInitialStages());
             setHistoryIdx(-1);
+            setIsModelDropdownOpen(false);
         }
     }, [isMagicBarOpen]);
 
@@ -527,42 +556,77 @@ export const MagicBar = () => {
 
                         {/* Model selector — bottom-left, shown only when idle */}
                         {status === 'idle' && (
-                            <div className="absolute bottom-3 left-3 flex items-center gap-1 flex-wrap max-w-[340px]">
-                                {MODEL_OPTIONS.map(opt => {
-                                    const isActive = opt.id === selectedModelId;
+                            <div className="absolute bottom-3 left-3 flex flex-col gap-2">
+                                <AnimatePresence>
+                                    {isModelDropdownOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute bottom-full left-0 mb-2 w-48 bg-[#18181b] border border-white/10 rounded-lg shadow-xl overflow-hidden flex flex-col z-50 p-1"
+                                        >
+                                            <div className="px-2 py-1.5 text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                                                Select Model
+                                            </div>
+                                            {MODEL_OPTIONS.map(opt => {
+                                                const isActive = opt.id === selectedModelId;
+                                                const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind };
+                                                const Icon = iconMap[opt.icon] ?? Cpu;
+                                                return (
+                                                    <button
+                                                        key={opt.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setSelectedModelId(opt.id);
+                                                            setIsModelDropdownOpen(false);
+                                                            try { localStorage.setItem(MODEL_KEY, opt.model); } catch { /* ignore */ }
+                                                        }}
+                                                        className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md text-[11px] font-medium transition-all text-left ${
+                                                            isActive
+                                                                ? 'bg-white/10 text-white'
+                                                                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                                                        }`}
+                                                    >
+                                                        <Icon size={12} style={{ color: opt.color }} className="shrink-0" />
+                                                        <div className="flex flex-col">
+                                                            <span>{opt.label}</span>
+                                                            <span className="text-[9px] text-zinc-600 font-mono pt-0.5" style={{ color: isActive ? 'rgba(255,255,255,0.4)' : undefined }}>
+                                                                {opt.sublabel}
+                                                            </span>
+                                                        </div>
+                                                        {isActive && (
+                                                            <CheckCircle size={12} className="ml-auto text-emerald-400 shrink-0" />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {(() => {
+                                    const activeOpt = MODEL_OPTIONS.find(m => m.id === selectedModelId) || MODEL_OPTIONS[0];
                                     const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind };
-                                    const Icon = iconMap[opt.icon] ?? Cpu;
+                                    const Icon = iconMap[activeOpt.icon] ?? Cpu;
                                     return (
                                         <button
-                                            key={opt.id}
                                             type="button"
-                                            onClick={() => {
-                                                setSelectedModelId(opt.id);
-                                                try { localStorage.setItem(MODEL_KEY, opt.model); } catch { /* ignore */ }
+                                            onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                                            title={`Current Model: ${activeOpt.label}`}
+                                            style={{
+                                                borderColor: activeOpt.color + '60',
+                                                background: activeOpt.color + '18',
+                                                color: activeOpt.color,
                                             }}
-                                            title={`${opt.label} — ${opt.sublabel}`}
-                                            style={isActive ? {
-                                                borderColor: opt.color + '60',
-                                                background: opt.color + '18',
-                                                color: opt.color,
-                                            } : {}}
-                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
-                                                isActive
-                                                    ? 'shadow-sm'
-                                                    : 'border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700'
-                                            }`}
+                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all shadow-sm hover:shadow-md"
                                         >
                                             <Icon size={9} />
-                                            <span>{opt.label}</span>
-                                            {isActive && (
-                                                <span
-                                                    style={{ background: opt.color }}
-                                                    className="w-1 h-1 rounded-full"
-                                                />
-                                            )}
+                                            <span>{activeOpt.label}</span>
+                                            {isModelDropdownOpen ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
                                         </button>
                                     );
-                                })}
+                                })()}
                             </div>
                         )}
                     </form>
