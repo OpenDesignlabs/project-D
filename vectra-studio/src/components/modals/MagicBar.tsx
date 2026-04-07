@@ -34,9 +34,9 @@ const MODEL_OPTIONS = [
     },
     {
         id:       'gemma4',
-        label:    'Gemma 4',
+        label:    'Gemma 4 31B',
         sublabel: 'Ollama • Local',
-        model:    'ollama:gemma3:27b',
+        model:    'ollama:gemma4:31b-cloud',
         color:    '#8b5cf6',  // violet
         provider: 'local',
         icon:     'Cpu',

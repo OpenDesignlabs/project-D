@@ -28,7 +28,7 @@ export const SERVER_AI_CONFIG = {
   debuggerModel: process.env.AI_DEBUGGER_MODEL ?? 'deepseek-ai/DeepSeek-R1-0528:together',
   primaryApiKey:  process.env.AI_PRIMARY_KEY  ?? '',
   debuggerApiKey: process.env.AI_DEBUGGER_KEY ?? '',
-  ollamaDefaultModel: process.env.OLLAMA_DEFAULT_MODEL ?? 'gemma3:27b',
+  ollamaDefaultModel: process.env.OLLAMA_DEFAULT_MODEL ?? 'gemma4:31b-cloud',
 };
 
 const MAX_RETRIES = 3;
