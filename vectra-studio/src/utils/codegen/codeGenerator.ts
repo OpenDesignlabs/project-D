@@ -1421,7 +1421,7 @@ export function cn(...inputs: ClassValue[]) {
       next: '14.2.5',
       react: '^18.3.1',
       'react-dom': '^18.3.1',
-      'lucide-react': '^0.263.1',
+      'lucide-react': '^0.577.0',
       'framer-motion': '^10.16.4',
       clsx: '^2.0.0',
       'tailwind-merge': '^2.0.0',

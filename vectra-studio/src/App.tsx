@@ -108,19 +108,6 @@ const EditorLayout = () => {
     document.title = projectName ? `${projectName} — Vectra` : 'Vectra';
     return () => { document.title = 'Vectra'; };
   }, [projectName]);
-  const [isImportOpen, setIsImportOpen] = useState(false);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  // session clipboard — stores last copied node ID.
-  const clipboardRef = useRef<string | null>(null);
-  // tracks that a nudge keydown is in-progress so the keyUp
-  // handler knows to commit one history entry. Ref (not state) — zero re-renders.
-  const nudgeActiveRef = useRef(false);
-
-  // Fires the initial AI prompt for template-based projects exactly once.
-  const initialPromptFiredRef = useRef(false);
-
-  useFileSync();
-  useAssetSync();
 
   // ── TEMPLATE AUTO-GENERATION ──────────────────────────────────────────────
   // Dashboard writes a prompt to sessionStorage when the user picks a non-blank
@@ -158,6 +145,18 @@ const EditorLayout = () => {
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
   // Intentional: elementsRef and runAI are stable refs. status is the only
   // reactive trigger — we only want this to fire when VFS transitions to ready.
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  // session clipboard — stores last copied node ID.
+  const clipboardRef = useRef<string | null>(null);
+  // tracks that a nudge keydown is in-progress so the keyUp
+  // handler knows to commit one history entry. Ref (not state) — zero re-renders.
+  const nudgeActiveRef = useRef(false);
+  // Fires the initial AI prompt for template-based projects exactly once.
+  const initialPromptFiredRef = useRef(false);
+
+  useFileSync();
+  useAssetSync();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

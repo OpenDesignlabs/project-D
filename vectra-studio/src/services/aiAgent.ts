@@ -259,7 +259,13 @@ const callDirectAPIWithStreaming = async (
             'Content-Type': 'application/json',
             ...(AI_CONFIG.serverSecret ? { 'x-vectra-server-secret': AI_CONFIG.serverSecret } : {}),
         },
-        body: JSON.stringify({ prompt, canvasContext }),
+        body: JSON.stringify({
+            prompt,
+            canvasContext,
+            // Pass the user-selected model so the server can route to Ollama or HF.
+            // Falls back to server default when not set.
+            model: localStorage.getItem('vectra_selected_model') || undefined,
+        }),
     });
 
     if (!res.ok) {

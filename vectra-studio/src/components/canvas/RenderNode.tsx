@@ -1756,7 +1756,18 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
             }}
             onDragLeave={() => setIsDragOver(false)}
             onDoubleClick={(e) => {
-                // Polish 3: double-click to rename.
+                // For custom_code/custom_component: open the Code tab in RightSidebar
+                // for inline JSX editing. This is the correct UX — these nodes have no
+                // Vectra child model, so "selecting children" is not possible.
+                if ((element.type === 'custom_code' || element.type === 'custom_component') && element.code) {
+                    if (previewMode || isMobileMirror) return;
+                    e.stopPropagation();
+                    setSelectedId(elementId);
+                    setActivePanel(null); // ensure right sidebar is visible
+                    window.dispatchEvent(new CustomEvent('vectra:open-code-tab', { detail: { id: elementId } }));
+                    return;
+                }
+                // Polish 3: double-click to rename for all other node types.
                 // Text-like nodes already enter inline editing on double-click (handled
                 // by handlePointerDown's dbl-click logic) — skip name-field for those.
                 const isTextLike = ['text', 'button', 'heading', 'link'].includes(element.type);
@@ -1862,6 +1873,27 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
                         zIndex: 9999,
                     }}
                 />
+            )}
+            {/* Double-click affordance for AI section nodes */}
+            {isSelected && !isMobileMirror && !previewMode &&
+             (element.type === 'custom_code' || element.type === 'custom_component') && element.code && (
+                <div
+                    className="pointer-events-none absolute select-none"
+                    style={{
+                        bottom: 4,
+                        right: 4,
+                        fontSize: '9px',
+                        fontFamily: 'monospace',
+                        color: 'rgba(96,165,250,0.6)',
+                        background: 'rgba(0,0,0,0.45)',
+                        padding: '1px 6px',
+                        borderRadius: 4,
+                        zIndex: 10000,
+                        letterSpacing: '0.02em',
+                    }}
+                >
+                    double-click to edit code
+                </div>
             )}
             {/* TOOLBAR-1: SingleNodeToolbar portal — lives in document.body, outside world-transform.
                 Uses nodeRef directly — no document.querySelector needed.

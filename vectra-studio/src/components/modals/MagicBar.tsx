@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useEditor } from '../../context/EditorContext';
 import {
     Sparkles, ArrowRight, Loader2, CheckCircle2, XCircle, Zap,
-    CheckCircle,
+    CheckCircle, Bot, Cpu,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -16,6 +16,45 @@ const FALLBACK_HINTS = [
 
 const HISTORY_KEY = 'vectra_prompt_history';
 const MAX_HISTORY = 12;
+const MODEL_KEY   = 'vectra_selected_model';
+
+// Available AI model options
+// model: value stored in localStorage and sent to the server.
+//   - Bare string (no prefix) → HuggingFace Router
+//   - 'ollama:...'            → Local Ollama
+const MODEL_OPTIONS = [
+    {
+        id:       'glm',
+        label:    'GLM-5',
+        sublabel: 'HuggingFace • Cloud',
+        model:    'zai-org/GLM-5:zai-org',
+        color:    '#3b82f6',  // blue
+        provider: 'cloud',
+        icon:     'Bot',
+    },
+    {
+        id:       'gemma4',
+        label:    'Gemma 4',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:gemma3:27b',
+        color:    '#8b5cf6',  // violet
+        provider: 'local',
+        icon:     'Cpu',
+    },
+] as const;
+
+type ModelId = typeof MODEL_OPTIONS[number]['id'];
+
+const getStoredModelId = (): ModelId => {
+    try {
+        const stored = localStorage.getItem(MODEL_KEY);
+        if (stored) {
+            const match = MODEL_OPTIONS.find(m => m.model === stored);
+            if (match) return match.id;
+        }
+    } catch { /* storage unavailable */ }
+    return 'glm'; // default
+};
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -184,6 +223,8 @@ export const MagicBar = () => {
     // Prompt history navigation
     const [promptHistory]   = useState<string[]>(loadHistory);
     const [historyIdx, setHistoryIdx] = useState(-1);
+    // Model selector
+    const [selectedModelId, setSelectedModelId] = useState<ModelId>(getStoredModelId);
     // Per-stage timing
     const stageStartRef = useRef<number>(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -456,6 +497,46 @@ export const MagicBar = () => {
                                 }
                             </button>
                         </div>
+
+                        {/* Model selector — bottom-left, shown only when idle */}
+                        {status === 'idle' && (
+                            <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
+                                {MODEL_OPTIONS.map(opt => {
+                                    const isActive = opt.id === selectedModelId;
+                                    const Icon = opt.provider === 'local' ? Cpu : Bot;
+                                    return (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedModelId(opt.id);
+                                                try { localStorage.setItem(MODEL_KEY, opt.model); } catch { /* ignore */ }
+                                            }}
+                                            title={`${opt.label} — ${opt.sublabel}`}
+                                            style={isActive ? {
+                                                borderColor: opt.color + '60',
+                                                background: opt.color + '18',
+                                                color: opt.color,
+                                            } : {}}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+                                                isActive
+                                                    ? 'shadow-sm'
+                                                    : 'border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:border-zinc-700'
+                                            }`}
+                                        >
+                                            <Icon size={9} />
+                                            <span>{opt.label}</span>
+                                            {isActive && (
+                                                <span
+                                                    style={{ background: opt.color }}
+                                                    className="w-1 h-1 rounded-full"
+                                                />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </form>
 
                     {/* Live stage pipeline — shown during generation */}

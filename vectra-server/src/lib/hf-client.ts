@@ -1,22 +1,34 @@
 /**
  * hf-client.ts
  * ─────────────────────────────────────────────────────────────────────────────
- * Server-side HuggingFace Router client.
- * Mirrors the logic from Studio's aiAgent.ts callDirectAPI +
- * callDirectAPIWithStreaming, but with API keys read from server env vars
- * instead of VITE_ browser-exposed vars.
+ * Server-side AI client — supports two providers:
+ *
+ *   HuggingFace Router  — any model string without the "ollama:" prefix.
+ *                         Requires AI_PRIMARY_KEY / AI_DEBUGGER_KEY env vars.
+ *
+ *   Ollama (local)      — model strings prefixed with "ollama:"
+ *                         e.g. "ollama:gemma3:27b" or "ollama:gemma3:12b"
+ *                         No API key needed. Reads OLLAMA_URL env var
+ *                         (default: http://localhost:11434).
+ *
+ * PROVIDER ROUTING — happens in generate.ts:
+ *   model.startsWith('ollama:') → callOllama / callOllamaStreaming
+ *   else                        → callHF / callHFStreaming
  *
  * API keys NEVER touch the browser after this move.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const HF_ENDPOINT = 'https://router.huggingface.co/v1/chat/completions';
+const HF_ENDPOINT   = 'https://router.huggingface.co/v1/chat/completions';
+const OLLAMA_URL    = process.env.OLLAMA_URL ?? 'http://localhost:11434';
+const OLLAMA_ENDPOINT = `${OLLAMA_URL}/api/chat`;
 
 export const SERVER_AI_CONFIG = {
   primaryModel:  process.env.AI_PRIMARY_MODEL  ?? 'zai-org/GLM-5:zai-org',
   debuggerModel: process.env.AI_DEBUGGER_MODEL ?? 'deepseek-ai/DeepSeek-R1-0528:together',
   primaryApiKey:  process.env.AI_PRIMARY_KEY  ?? '',
   debuggerApiKey: process.env.AI_DEBUGGER_KEY ?? '',
+  ollamaDefaultModel: process.env.OLLAMA_DEFAULT_MODEL ?? 'gemma3:27b',
 };
 
 const MAX_RETRIES = 3;
@@ -186,4 +198,103 @@ export async function callHFStreaming(
   }
 
   throw new Error('[vectra-server/hf-client] Streaming exhausted retries');
+}
+
+// ─── OLLAMA (local) ───────────────────────────────────────────────────────────
+// Strips the "ollama:" prefix and calls the local Ollama REST API.
+// Uses /api/chat (non-streaming) or /api/chat with stream:true.
+// The Ollama API is NOT OpenAI-compatible at /v1/ for all models,
+// so we target /api/chat directly which is always available.
+
+export async function callOllama(
+  systemPrompt: string,
+  userPrompt: string,
+  modelWithPrefix: string,
+  temperature = 0.65
+): Promise<string> {
+  const model = modelWithPrefix.replace(/^ollama:/, '');
+  console.log(`[vectra-server/ollama] Calling ${model} (non-streaming)`);
+
+  const res = await fetch(OLLAMA_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt },
+      ],
+      stream: false,
+      options: { temperature },
+    }),
+    signal: AbortSignal.timeout(600_000), // 10 mins — local models can be slow
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Ollama error ${res.status}: ${text.slice(0, 200)}`);
+  }
+
+  const data = await res.json() as any;
+  // Ollama non-streaming: { message: { role, content } }
+  return data?.message?.content ?? '';
+}
+
+export async function callOllamaStreaming(
+  systemPrompt: string,
+  userPrompt: string,
+  modelWithPrefix: string,
+  temperature = 0.65
+): Promise<string> {
+  const model = modelWithPrefix.replace(/^ollama:/, '');
+  console.log(`[vectra-server/ollama] Calling ${model} (streaming)`);
+
+  const res = await fetch(OLLAMA_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt },
+      ],
+      stream: true,
+      options: { temperature },
+    }),
+    signal: AbortSignal.timeout(600_000),
+  });
+
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Ollama streaming error ${res.status}: ${text.slice(0, 200)}`);
+  }
+
+  // Ollama streaming: newline-delimited JSON objects, each with { done, message: { content } }
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let accumulated = '';
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const chunk = JSON.parse(trimmed) as any;
+        accumulated += chunk?.message?.content ?? '';
+        if (chunk.done) break;
+      } catch {
+        // malformed JSON line — skip
+      }
+    }
+  }
+
+  return accumulated;
 }

@@ -123,7 +123,9 @@ export const RightSidebar = () => {
     // Tracks drag state so history is skipped during slider movement and committed once on pointerUp.
     const isSliderDragging = useRef(false);
     // Polish 3: ref for the element name input so vectra:focus-name-field can drive focus.
-    const nameInputRef = useRef<HTMLInputElement>(null);
+    const nameInputRef    = useRef<HTMLInputElement>(null);
+    // Patch 4A: ref for the code textarea so vectra:open-code-tab can focus it immediately.
+    const codeTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Local state for glassmorphism effects
     const [blur, setBlur] = useState(0);
@@ -170,6 +172,24 @@ export const RightSidebar = () => {
         window.addEventListener('vectra:focus-name-field', handler);
         return () => window.removeEventListener('vectra:focus-name-field', handler);
     }, [selectedId]);
+
+    // Issue 3: Switch to the Code tab when double-clicking an AI section on the canvas.
+    // RenderNode dispatches 'vectra:open-code-tab' with the element id.
+    // Guard: only switch if this sidebar is showing that same element.
+    // rAF so the textarea has mounted before we focus — guarantees instant edit UX.
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { id } = (e as CustomEvent<{ id: string }>).detail;
+            if (id !== selectedId) return;
+            setActiveTab('code');
+            requestAnimationFrame(() => {
+                codeTextareaRef.current?.focus();
+            });
+        };
+        window.addEventListener('vectra:open-code-tab', handler);
+        return () => window.removeEventListener('vectra:open-code-tab', handler);
+    }, [selectedId]);
+
 
     // ENGINE v0.4: ColorEngine for WCAG contrast + color manipulation
     const colorEngine = useColorEngine();
@@ -892,6 +912,7 @@ export const RightSidebar = () => {
                             {/* Editor textarea */}
                             <div className="flex-1 relative min-h-0">
                                 <textarea
+                                    ref={codeTextareaRef}
                                     className={cn(
                                         "absolute inset-0 w-full h-full bg-[#0d0d0f] text-[11px] text-[#d4d4d4] font-mono",
                                         "resize-none outline-none p-3 leading-[1.65] custom-scrollbar",

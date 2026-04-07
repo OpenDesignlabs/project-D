@@ -225,8 +225,7 @@ export const Canvas = () => {
         pan, setPan,
         isPanning, setIsPanning,
         guides,
-        previewMode, setPreviewMode,
-        device, setDevice,
+        previewMode,
         dragData, setDragData,
         selectedId: _sid, setSelectedId,
         interaction, setInteraction: _si,
@@ -807,47 +806,9 @@ export const Canvas = () => {
             onDragOver={(e) => e.preventDefault()}
         >
             {previewMode ? (
-                // ── Full-canvas preview — renders ALL node types via RenderNode ───
-                // Replaces the old ContainerPreview iframe branch (P3B).
-                // Device-width clamp mirrors ContainerPreview's DEVICE_WIDTHS map.
-                <div className="absolute inset-0 z-100 bg-[#09090b] overflow-y-auto flex flex-col items-center">
-                    {/* Slim toolbar: device switcher + close */}
-                    <div className="sticky top-0 z-10 w-full flex items-center justify-between px-4 py-2 bg-[#09090b]/90 backdrop-blur border-b border-white/10 shrink-0">
-                        <div className="flex items-center gap-1">
-                            {(['desktop', 'tablet', 'mobile'] as const).map(d => (
-                                <button
-                                    key={d}
-                                    onClick={() => setDevice(d)}
-                                    className={`px-2.5 py-1 rounded text-[11px] font-medium capitalize transition-colors ${
-                                        device === d
-                                            ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
-                                            : 'text-zinc-500 hover:text-white'
-                                    }`}
-                                >
-                                    {d}
-                                </button>
-                            ))}
-                        </div>
-                        <button
-                            onClick={() => setPreviewMode(false)}
-                            className="px-3 py-1 text-[11px] text-zinc-400 hover:text-white hover:bg-white/10 rounded transition-colors"
-                        >
-                            Exit Preview
-                        </button>
-                    </div>
-
-                    {/* Page content — device-width constrained */}
-                    <div
-                        className={`w-full transition-all duration-300 ${
-                            device === 'tablet' ? 'max-w-[768px]' :
-                            device === 'mobile' ? 'max-w-[375px]' :
-                            'max-w-[1440px]'
-                        }`}
-                    >
-                        <CanvasErrorBoundary onUndo={history.undo}>
-                            <RenderNode elementId={activePageId} key={`preview-${activePageId}`} />
-                        </CanvasErrorBoundary>
-                    </div>
+                // ── Full-screen preview overlay ───────────────────────────────
+                <div className="absolute inset-0 z-100 bg-black">
+                    <ContainerPreview />
                 </div>
             ) : (
                 // ── Transformed canvas world ──────────────────────────────────
@@ -1015,9 +976,6 @@ export const Canvas = () => {
 
             {/* CF-1: Frame Picker — fixed to viewport bottom-left */}
             {!previewMode && <FramePicker onAddFrame={addFrame} />}
-
-            {/* Mini live-preview widget — visible while editing, not during full-canvas preview */}
-            {!previewMode && <ContainerPreview />}
 
             {/* ── TOOLBAR-1 [PERMANENT]: Floating toolbars — fixed, outside world div, never scale with zoom.
                 Single-node toolbar: rendered as a portal by RenderNode for the selected node (Bug 4 fix).
