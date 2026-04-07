@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useEditor } from '../../context/EditorContext';
 import {
     Sparkles, ArrowRight, Loader2, CheckCircle2, XCircle, Zap,
-    CheckCircle, Bot, Cpu,
+    CheckCircle, Bot, Cpu, Code2, Brain, Wind,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -42,31 +42,31 @@ const MODEL_OPTIONS = [
         icon:     'Cpu',
     },
     {
-        id:       'qwen3',
-        label:    'Qwen 3 Coder',
+        id:       'qwen-coder',
+        label:    'Qwen Coder',
         sublabel: 'Ollama • Local',
         model:    'ollama:qwen3-coder:30b-cloud',
-        color:    '#10b981',  // emerald
+        color:    '#f59e0b',  // amber
         provider: 'local',
-        icon:     'Cpu',
+        icon:     'Code2',
     },
     {
-        id:       'gptoss',
+        id:       'gpt-oss',
         label:    'GPT-OSS 120B',
         sublabel: 'Ollama • Local',
         model:    'ollama:gpt-oss:120b-cloud',
-        color:    '#f59e0b',  // amber
+        color:    '#10b981',  // emerald
         provider: 'local',
-        icon:     'Cpu',
+        icon:     'Brain',
     },
     {
         id:       'kimi',
-        label:    'Kimi v2.5',
+        label:    'Kimi K2.5',
         sublabel: 'Ollama • Local',
         model:    'ollama:kimi-k2.5:cloud',
-        color:    '#ef4444',  // red
+        color:    '#ec4899',  // pink
         provider: 'local',
-        icon:     'Cpu',
+        icon:     'Wind',
     },
 ] as const;
 
@@ -527,10 +527,11 @@ export const MagicBar = () => {
 
                         {/* Model selector — bottom-left, shown only when idle */}
                         {status === 'idle' && (
-                            <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
+                            <div className="absolute bottom-3 left-3 flex items-center gap-1 flex-wrap max-w-[340px]">
                                 {MODEL_OPTIONS.map(opt => {
                                     const isActive = opt.id === selectedModelId;
-                                    const Icon = opt.provider === 'local' ? Cpu : Bot;
+                                    const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind };
+                                    const Icon = iconMap[opt.icon] ?? Cpu;
                                     return (
                                         <button
                                             key={opt.id}
