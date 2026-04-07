@@ -471,11 +471,11 @@ export const MagicBar = () => {
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="relative w-full max-w-2xl bg-[#09090b] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+                    className="relative w-full max-w-2xl bg-[#09090b] border border-white/10 rounded-xl shadow-2xl"
                 >
                     {/* Progress bar */}
                     {status === 'generating' && (
-                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-zinc-800/80 overflow-hidden">
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-zinc-800/80 overflow-hidden rounded-t-xl">
                             <motion.div
                                 className="h-full bg-linear-to-r from-blue-500 to-violet-500"
                                 initial={{ width: '0%' }}
