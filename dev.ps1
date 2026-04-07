@@ -16,7 +16,7 @@ function Start-DevServer {
 
 function Start-Ollama {
     Write-Host "Starting Ollama..." -ForegroundColor Cyan
-    Start-Process -FilePath "pwsh" -ArgumentList "-Command", "cd vectra-server; bash ./start-ollama.sh"
+    Start-Process -FilePath "pwsh" -ArgumentList "-Command", "ollama serve"
 }
 
 # Start Ollama first
