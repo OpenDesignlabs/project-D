@@ -46,7 +46,7 @@ const MODEL_OPTIONS = [
         label:    'Qwen 3 Coder',
         sublabel: 'Ollama • Local',
         model:    'ollama:qwen3-coder:30b-cloud',
-        color:    '#14b8a6',  // teal
+        color:    '#10b981',  // emerald
         provider: 'local',
         icon:     'Cpu',
     },
@@ -61,10 +61,10 @@ const MODEL_OPTIONS = [
     },
     {
         id:       'kimi',
-        label:    'Kimi K2.5',
+        label:    'Kimi v2.5',
         sublabel: 'Ollama • Local',
         model:    'ollama:kimi-k2.5:cloud',
-        color:    '#ec4899',  // pink
+        color:    '#ef4444',  // red
         provider: 'local',
         icon:     'Cpu',
     },
