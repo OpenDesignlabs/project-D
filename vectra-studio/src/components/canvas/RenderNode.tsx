@@ -1602,26 +1602,7 @@ export const RenderNode: React.FC<RenderNodeProps> = ({ elementId, isMobileMirro
                     // Regular (non-mirror) artboard — renders its own children
                     // ONBOARD-1: Empty artboard prompt.
                     <>
-                        {(!element.children || element.children.length === 0) && !previewMode && (
-                            <div
-                                className="absolute inset-0 flex flex-col items-center justify-center gap-4 pointer-events-none select-none"
-                                style={{ zIndex: 1 }}
-                            >
-                                <div className="w-14 h-14 rounded-2xl border-2 border-dashed border-zinc-300/40 flex items-center justify-center">
-                                    <Plus size={24} className="text-zinc-400/60" />
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-sm font-semibold text-zinc-400/70">Start designing</p>
-                                    <p className="text-[11px] text-zinc-500/60 mt-1.5 leading-relaxed">
-                                        Drag from the insert panel
-                                        <br />
-                                        or press{' '}
-                                        <kbd className="bg-zinc-200/20 text-zinc-300/80 px-1.5 py-0.5 rounded text-[10px] font-mono">⌘K</kbd>
-                                        {' '}to generate with AI
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+
                         {element.children?.map(childId => (
                             <RenderNode
                                 key={isMobileMirror ? `${childId}-mirror` : childId}

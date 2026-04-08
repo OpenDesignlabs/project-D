@@ -7,7 +7,7 @@ import { ContainerPreview } from './ContainerPreview';
 import { FramePicker } from './FramePicker';
 import { TEMPLATES } from '../../data/templates';
 import { CanvasErrorBoundary } from './CanvasErrorBoundary';
-import { Wand2, Plus, MousePointerClick } from 'lucide-react';
+
 
 // Invisible 8px drag handle at the bottom of each artboard frame. Memoized — only re-renders when frameId or zoom changes.
 const ArtboardResizeHandle = React.memo<{ frameId: string; zoom: number }>(({ frameId, zoom }) => {
@@ -236,7 +236,7 @@ export const Canvas = () => {
         clearSelection, addToSelection,
         // selectedIds drives the bounding box overlay.
         selectedIds,
-        setMagicBarOpen,
+
     } = useUI();
 
     // ── Assembled bridge values (componentRegistry merges static + dynamic) ───
@@ -837,41 +837,7 @@ export const Canvas = () => {
                                 if (el.props?.collapsed) return null;  // collapsed frames skip
                                 return <ArtboardResizeHandle key={`arh-${cid}`} frameId={cid} zoom={zoom} />;
                             })}
-                            {/* Empty artboard state — shown when webpage has no children */}
-                            {(() => {
-                                const pageRoot = elements[activePageId];
-                                const webpageId = pageRoot?.children?.find(cid => elements[cid]?.type === 'webpage');
-                                if (!webpageId) return null;
-                                const isEmpty = !elements[webpageId]?.children?.length;
-                                if (!isEmpty) return null;
-                                return (
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 10 }}>
-                                        <div className="flex flex-col items-center gap-5 pointer-events-auto" style={{ userSelect: 'none' }}>
-                                            <div className="w-64 h-40 rounded-2xl flex items-center justify-center" style={{ border: '2px dashed #2e2e32', background: 'rgba(255,255,255,0.012)' }}>
-                                                <MousePointerClick size={28} style={{ color: '#2e2e32' }} />
-                                            </div>
-                                            <div className="text-center">
-                                                <div className="text-sm font-semibold mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>Your canvas is empty</div>
-                                                <div className="text-[11px]" style={{ color: '#444' }}>Generate with AI, drag from the insert panel, or drop a template</div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => setMagicBarOpen(true)}
-                                                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold text-white transition-all active:scale-95"
-                                                    style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', boxShadow: '0 4px 16px rgba(124,58,237,0.3)' }}>
-                                                    <Wand2 size={13} /> Generate with AI
-                                                    <kbd className="text-[9px] font-mono opacity-60 border border-white/20 px-1 rounded ml-1">⌘K</kbd>
-                                                </button>
-                                                <button onClick={() => { if (!isInsertDrawerOpen) toggleInsertDrawer(); }}
-                                                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all active:scale-95"
-                                                    style={{ background: '#2a2a2d', border: '1px solid #3e3e42', color: '#ccc' }}>
-                                                    <Plus size={13} /> Insert element
-                                                    <kbd className="text-[9px] font-mono opacity-40 border border-white/10 px-1 rounded ml-1">I</kbd>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
+
                         </div>
                     </CanvasErrorBoundary>
 
