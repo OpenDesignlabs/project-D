@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 
 import { useEditor } from '../../context/EditorContext';
 import { useContainer } from '../../context/ContainerContext';
-import { copyToClipboard, generateGridPage, generateProjectCode, generateNextProjectCode } from '../../utils/codegen/codeGenerator';
+import { generateProjectCode, generateNextProjectCode } from '../../utils/codegen/codeGenerator';
 import type { GeneratedFileMap } from '../../utils/codegen/codeGenerator';
 import {
-    Play, Undo, Redo, Grid,
-    Check, X, Copy, Trash2,
+    Play, Undo, Redo,
+    Trash2,
     Home, Wand2, Loader2, Download,
     Cpu, Maximize, ExternalLink, ChevronDown, Plus, FileText,
     Upload, Send, FileArchive, Figma, RotateCcw,
@@ -124,25 +124,6 @@ export const Header = () => {
         }
     };
 
-    // ── Grid converter state ──────────────────────────────────────
-    // ── Item 3: Multi-page grid results ─────────────────────────────────────────
-    interface GridPageResult {
-        code: string;
-        error: string | null;
-        layout: import('../../utils/codegen/codeGenerator').GridLayout | null;
-    }
-
-    // Map<pageId, GridPageResult> — keyed by page.id
-    const [gridPageResults, setGridPageResults] = useState<Map<string, GridPageResult>>(new Map());
-    const [gridSelectedPageId, setGridSelectedPageId] = useState<string>('');
-
-    // KEEP these existing state vars:
-    const [showGridCode, setShowGridCode] = useState(false);
-    const [gridCopied, setGridCopied] = useState(false);
-    const [isConvertingGrid, setIsConvertingGrid] = useState(false);
-    const [useFrUnits, setUseFrUnits] = useState(false);
-
-    // ── DEV: full browser-state reset ─────────────────────────────────────────
     const [resetConfirm, setResetConfirm] = useState(false);
     const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const handleDevReset = async () => {
@@ -170,146 +151,10 @@ export const Header = () => {
         setPreviewMode(!previewMode);
     };
 
-    // ── Gap 2 Fix: Clear grid results when project switches ─────────────────
-    useEffect(() => {
-        setGridPageResults(new Map());
-        setGridSelectedPageId('');
-        setShowGridCode(false);
-    }, [projectId]);
 
 
-    // ── Item 3: Multi-page grid converter ────────────────────────────────────────
-    // Iterates over all pages, runs WASM + generateGridPage() per page.
-    // A per-page failure stores an error result without aborting other pages.
-    // The modal tab bar lets the user review each page's output independently.
-    const handleConvertToGrid = () => {
-        if (!(window as any).vectraWasm?.absolute_to_grid) {
-            // Surface the WASM error as a single result for all pages
-            const errorResult: GridPageResult = {
-                code: '',
-                error: 'Rust WASM engine is not loaded.\n\nCompile the engine first:\n  cd vectra-engine && wasm-pack build --target web',
-                layout: null,
-            };
-            const results = new Map<string, GridPageResult>();
-            pages.forEach(p => results.set(p.id, errorResult));
-            setGridPageResults(results);
-            setGridSelectedPageId(pages[0]?.id || '');
-            setShowGridCode(true);
-            return;
-        }
 
-        setIsConvertingGrid(true);
-        setGridPageResults(new Map());
 
-        const px = (val: unknown): number => {
-            const n = parseFloat(String(val || 0));
-            return isNaN(n) ? 0 : n;
-        };
-
-        const results = new Map<string, GridPageResult>();
-        let firstPageId = '';
-
-        for (const page of pages) {
-            if (!firstPageId) firstPageId = page.id;
-
-            try {
-                const pageRoot = elements[page.rootId];
-                const canvasFrameId = pageRoot?.children?.find(
-                    (cid: string) => elements[cid]?.type === 'webpage'
-                ) || pageRoot?.children?.[0];
-
-                if (!canvasFrameId) {
-                    results.set(page.id, {
-                        code: '', error: `No canvas frame found on page "${page.name}".`, layout: null,
-                    });
-                    continue;
-                }
-
-                const canvasFrame = elements[canvasFrameId];
-                const childIds: string[] = canvasFrame?.children || [];
-
-                if (childIds.length === 0) {
-                    results.set(page.id, {
-                        code: '', error: `Page "${page.name}" has no canvas children to convert.`, layout: null,
-                    });
-                    continue;
-                }
-
-                const gridNodes = childIds
-                    .map(id => {
-                        const node = elements[id];
-                        if (!node) return null;
-                        const style = (node.props?.style as any) || {};
-                        return { id, x: px(style.left), y: px(style.top), w: px(style.width), h: px(style.height) };
-                    })
-                    .filter((n): n is NonNullable<typeof n> => n !== null && n.w > 0 && n.h > 0);
-
-                if (gridNodes.length === 0) {
-                    results.set(page.id, {
-                        code: '',
-                        error: `No nodes with valid dimensions on page "${page.name}".\nMake sure canvas children have explicit width/height.`,
-                        layout: null,
-                    });
-                    continue;
-                }
-
-                const canvasWidth = px((canvasFrame.props?.style as any)?.width) || 1440;
-                const resultJson: string = (window as any).vectraWasm.absolute_to_grid(
-                    JSON.stringify(gridNodes),
-                    canvasWidth
-                );
-                const gridLayout = JSON.parse(resultJson);
-                const generated = generateGridPage(
-                    page, elements, gridLayout,
-                    framework as 'nextjs' | 'vite',
-                    useFrUnits
-                );
-
-                results.set(page.id, { code: generated, error: null, layout: gridLayout });
-
-                console.log(
-                    `[Vectra] ✅ Grid: "${page.name}" — ` +
-                    `${gridLayout.templateColumns.split(' ').length} cols × ` +
-                    `${gridLayout.templateRows.split(' ').length} rows`
-                );
-            } catch (err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                console.error(`[Vectra] Grid conversion failed for page "${page.name}":`, err);
-                results.set(page.id, { code: '', error: msg, layout: null });
-            }
-        }
-
-        setGridPageResults(results);
-        setGridSelectedPageId(firstPageId);
-        setUseFrUnits(false);
-        setShowGridCode(true);
-        setGridCopied(false);
-        setIsConvertingGrid(false);
-    };
-
-    // ─── Sprint 1 / Item 3: fr/px unit toggle ─────────────────────────────────
-    // Regenerate all pages that have a valid layout
-    const handleFrToggle = () => {
-        const nextFr = !useFrUnits;
-        setUseFrUnits(nextFr);
-        setGridCopied(false);
-
-        // Regenerate all pages that have a valid layout (no WASM re-call)
-        setGridPageResults(prev => {
-            const updated = new Map(prev);
-            for (const page of pages) {
-                const result = prev.get(page.id);
-                if (!result?.layout) continue; // skip pages with errors
-                const regenerated = generateGridPage(
-                    page, elements, result.layout,
-                    framework as 'nextjs' | 'vite',
-                    nextFr
-                );
-                updated.set(page.id, { ...result, code: regenerated });
-            }
-            return updated;
-        });
-    }; // reset — code changed
 
     return (
         <>
@@ -457,24 +302,7 @@ export const Header = () => {
 
                     <div className="h-4 w-px bg-[#3e3e42] mx-1" />
 
-                    {/* ── To Grid ───────────────────────────────────── */}
-                    <button
-                        id="convert-to-grid-btn"
-                        onClick={handleConvertToGrid}
-                        disabled={isConvertingGrid || status !== 'ready'}
-                        title="Convert canvas layout to responsive CSS Grid"
-                        className={cn(
-                            'flex items-center gap-1.5 px-2 py-1.5 rounded text-[10px] font-bold transition-all border',
-                            isConvertingGrid
-                                ? 'bg-[#252526] border-[#3e3e42] text-purple-400 cursor-wait'
-                                : 'bg-[#252526] border-[#3e3e42] text-[#858585] hover:text-purple-400 hover:border-purple-500/40 disabled:opacity-30 disabled:cursor-not-allowed'
-                        )}
-                    >
-                        {isConvertingGrid
-                            ? <><Loader2 size={11} className="animate-spin" /><span>Converting...</span></>
-                            : <><Grid size={11} /><span>To Grid</span></>
-                        }
-                    </button>
+
 
                     {/* ── Import Dropdown ────────────────────────────── */}
                     <div className="relative" ref={importMenuRef}>
@@ -609,168 +437,7 @@ export const Header = () => {
             </div >
 
 
-            {/* ── Item 3: Multi-page Grid Code Modal ─────────────────────────────── */}
-            {showGridCode && (
-                <div className="fixed inset-0 bg-black/80 z-100 flex items-center justify-center p-8 backdrop-blur-sm">
-                    <div className="bg-[#1e1e1e] w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl flex flex-col overflow-hidden border border-[#333]">
 
-                        {/* Modal header */}
-                        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#333] bg-[#252526] flex-wrap">
-                            <span className="font-medium text-gray-200 flex items-center gap-2 shrink-0">
-                                <Grid size={16} className="text-purple-400" />
-                                Responsive CSS Grid
-                            </span>
-
-                            {/* Page tab bar */}
-                            {pages.length > 1 && (
-                                <div className="flex items-center gap-1 flex-1 flex-wrap">
-                                    {pages.map(page => {
-                                        const result = gridPageResults.get(page.id);
-                                        const isActive = page.id === gridSelectedPageId;
-                                        const hasError = !!result?.error;
-                                        return (
-                                            <button
-                                                key={page.id}
-                                                onClick={() => { setGridSelectedPageId(page.id); setGridCopied(false); }}
-                                                className={cn(
-                                                    'px-2.5 py-1 rounded text-[10px] font-bold transition-all border',
-                                                    isActive
-                                                        ? hasError
-                                                            ? 'bg-red-500/15 border-red-500/30 text-red-400'
-                                                            : 'bg-purple-500/15 border-purple-500/30 text-purple-300'
-                                                        : 'bg-transparent border-transparent text-[#555] hover:text-[#888]'
-                                                )}
-                                            >
-                                                {hasError ? '⚠ ' : ''}{page.name}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {/* fr/px toggle */}
-                            {(() => {
-                                const hasAnyLayout = [...gridPageResults.values()].some(r => r.layout !== null);
-                                return hasAnyLayout && (
-                                    <button
-                                        onClick={handleFrToggle}
-                                        title={useFrUnits ? 'Switch to px' : 'Switch to fr (fluid)'}
-                                        className={cn(
-                                            'flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[10px] font-bold border transition-all shrink-0',
-                                            useFrUnits
-                                                ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                                                : 'bg-[#2d2d2d] border-[#3e3e42] text-[#666] hover:text-[#999]'
-                                        )}
-                                    >
-                                        <span className={cn(
-                                            'w-6 h-3 rounded-full flex items-center transition-colors px-0.5',
-                                            useFrUnits ? 'bg-purple-500 justify-end' : 'bg-[#444] justify-start'
-                                        )}>
-                                            <span className="w-2 h-2 rounded-full bg-white shadow-sm" />
-                                        </span>
-                                        {useFrUnits ? 'fr units' : 'px units'}
-                                    </button>
-                                );
-                            })()}
-
-                            {/* Copy button */}
-                            {(() => {
-                                const activeResult = gridPageResults.get(gridSelectedPageId);
-                                return activeResult?.code && (
-                                    <button
-                                        onClick={async () => {
-                                            const ok = await copyToClipboard(activeResult.code);
-                                            if (ok) { setGridCopied(true); setTimeout(() => setGridCopied(false), 2000); }
-                                        }}
-                                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded flex items-center gap-2 transition-colors shrink-0"
-                                    >
-                                        {gridCopied ? <><Check size={12} />Copied!</> : <><Copy size={12} />Copy</>}
-                                    </button>
-                                );
-                            })()}
-
-                            <button
-                                onClick={() => { setShowGridCode(false); setGridPageResults(new Map()); }}
-                                className="p-1.5 hover:bg-[#3e3e42] rounded text-gray-400 transition-colors shrink-0 ml-auto"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        {/* Modal body — show selected page result */}
-                        <div className="flex-1 overflow-auto">
-                            {(() => {
-                                const activeResult = gridPageResults.get(gridSelectedPageId);
-                                const activePage = pages.find(p => p.id === gridSelectedPageId);
-
-                                if (!activeResult) {
-                                    return (
-                                        <div className="flex items-center justify-center h-full text-[#555] text-sm">
-                                            No results yet.
-                                        </div>
-                                    );
-                                }
-
-                                if (activeResult.error) {
-                                    return (
-                                        <div className="p-6">
-                                            <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4 mb-4">
-                                                <p className="text-red-400 text-xs font-bold mb-2 flex items-center gap-2">
-                                                    <X size={12} /> Conversion failed — {activePage?.name}
-                                                </p>
-                                                <pre className="text-red-300/80 text-[11px] font-mono whitespace-pre-wrap leading-relaxed">
-                                                    {activeResult.error}
-                                                </pre>
-                                            </div>
-                                            <div className="p-3 bg-[#252526] border border-[#3e3e42] rounded text-[10px] text-[#666] font-mono space-y-1">
-                                                <p>Checklist:</p>
-                                                <p>• Canvas frame must have children with explicit left/top/width/height</p>
-                                                <p>• Elements need position:absolute (canvas layoutMode nodes)</p>
-                                                <p>• WASM must be compiled: cd vectra-engine &amp;&amp; wasm-pack build --target web</p>
-                                            </div>
-                                        </div>
-                                    );
-                                }
-
-                                return (
-                                    <div className="flex flex-col h-full">
-                                        {/* ENGINE v0.2: fr unit info strip — shown when the layout has frColumns data */}
-                                        {activeResult.layout?.frColumns && (
-                                            <div className="px-6 py-2 border-b border-[#252526] bg-[#1a1a1a] flex items-center gap-4 shrink-0">
-                                                <span className="text-[9px] text-[#555] font-mono uppercase tracking-wider">fr units</span>
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className="text-[9px] font-mono text-purple-400/80">
-                                                        cols: {activeResult.layout.frColumns}
-                                                    </span>
-                                                    <span className="text-[9px] font-mono text-purple-400/60">
-                                                        rows: {activeResult.layout.frRows}
-                                                    </span>
-                                                </div>
-                                                <span className="text-[9px] text-[#444] ml-auto">fluid — scales with container width</span>
-                                            </div>
-                                        )}
-                                        <pre className="flex-1 p-6 text-[#d4d4d4] text-xs font-mono leading-relaxed whitespace-pre overflow-x-auto">
-                                            <code>{activeResult.code}</code>
-                                        </pre>
-                                    </div>
-                                );
-                            })()}
-                        </div>
-
-                        {/* Modal footer */}
-                        <div className="px-4 py-2 border-t border-[#333] bg-[#1a1a1a] flex items-center gap-3">
-                            <span className="text-[10px] text-[#555]">
-                                {pages.length > 1
-                                    ? `${[...gridPageResults.values()].filter(r => !r.error).length} of ${pages.length} pages converted successfully`
-                                    : 'Replace app/page.tsx with this file, or use as a starting point.'}
-                            </span>
-                            <span className="ml-auto text-[9px] text-[#444] font-mono">
-                                v0.2 — Rust WASM Grid Engine
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* ── Publish Modal ──────────────────────────────────────────── */}
             {showPublishModal && (

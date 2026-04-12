@@ -13,7 +13,7 @@ import {
     Hand, Settings, Layout, Hash, Type as TypeIcon,
     MoveHorizontal, MoveVertical, Droplets, Sun, Move,
     CornerUpLeft, CornerUpRight, CornerDownLeft, CornerDownRight, Layers,
-    Smartphone, Tablet, Monitor,
+    Smartphone,
     Code2, Wand2, Clipboard, ClipboardCheck, TerminalSquare, Loader2,
     Sparkles,
 } from 'lucide-react';
@@ -117,7 +117,7 @@ export const RightSidebar = () => {
             runAI,  // AI panel re-prompt path
     } = useEditor();
     // Direction A: read activeBreakpoint and setDevice from UIContext
-    const { activeBreakpoint, setDevice, selectedIds } = useUI();
+    const { activeBreakpoint, selectedIds } = useUI();
     const [activeTab, setActiveTab] = useState<Tab>('design');
     const [animScope, setAnimScope] = useState<'single' | 'all'>('single');
     // Tracks drag state so history is skipped during slider movement and committed once on pointerUp.
@@ -630,32 +630,7 @@ export const RightSidebar = () => {
                 )}
             </div>
 
-            {/* Direction A: Breakpoint selector — hidden on code tab (sections own their responsive CSS) */}
-            {activeTab !== 'code' && <div className="flex items-center gap-0.5 px-2 pt-2 pb-1 border-b border-[#2a2a2c]">
-                {([
-                    { bp: 'desktop', icon: Monitor, label: 'Desktop' },
-                    { bp: 'tablet', icon: Tablet, label: 'Tablet' },
-                    { bp: 'mobile', icon: Smartphone, label: 'Mobile' },
-                ] as const).map(({ bp, icon: Icon, label }) => (
-                    <button
-                        key={bp}
-                        title={`Edit ${label} styles`}
-                        onClick={() => setDevice(
-                            bp === 'desktop' ? 'desktop' :
-                                bp === 'tablet' ? 'tablet' : 'mobile'
-                        )}
-                        className={cn(
-                            'flex-1 flex items-center justify-center gap-1 py-1 rounded text-[10px] font-bold transition-all',
-                            activeBreakpoint === bp
-                                ? 'bg-blue-500/15 border border-blue-500/30 text-blue-400'
-                                : 'text-[#555] hover:text-[#888] border border-transparent'
-                        )}
-                    >
-                        <Icon size={10} />
-                        {label}
-                    </button>
-                ))}
-            </div>}
+
 
             {/* Breakpoint edit banner — only shown when NOT on desktop */}
             {activeBreakpoint !== 'desktop' && (

@@ -9,85 +9,81 @@ import { useFileSync } from './hooks/useFileSync';
 import { useAssetSync } from './hooks/useAssetSync';
 
 // 1. LAZY LOAD CHUNKS — editor shell (loaded once when entering editor)
-const Header       = lazy(() => import('./components/layout/Header').then(m => ({ default: m.Header })));
-const LeftSidebar  = lazy(() => import('./components/layout/LeftSidebar').then(m => ({ default: m.LeftSidebar })));
+const Header = lazy(() => import('./components/layout/Header').then(m => ({ default: m.Header })));
+const LeftSidebar = lazy(() => import('./components/layout/LeftSidebar').then(m => ({ default: m.LeftSidebar })));
 const RightSidebar = lazy(() => import('./components/layout/RightSidebar').then(m => ({ default: m.RightSidebar })));
-const Canvas       = lazy(() => import('./components/canvas/Canvas').then(m => ({ default: m.Canvas })));
-const ImportModal  = lazy(() => import('./components/modals/ImportModal').then(m => ({ default: m.ImportModal })));
-const MagicBar     = lazy(() => import('./components/modals/MagicBar').then(m => ({ default: m.MagicBar })));
+const Canvas = lazy(() => import('./components/canvas/Canvas').then(m => ({ default: m.Canvas })));
+const ImportModal = lazy(() => import('./components/modals/ImportModal').then(m => ({ default: m.ImportModal })));
+const MagicBar = lazy(() => import('./components/modals/MagicBar').then(m => ({ default: m.MagicBar })));
 const AISuccessToast = lazy(() =>
-    import('./components/modals/AISuccessToast').then(m => ({ default: m.AISuccessToast }))
+  import('./components/modals/AISuccessToast').then(m => ({ default: m.AISuccessToast }))
 );
 const ShortcutsOverlay = lazy(() =>
-    import('./components/ui/ShortcutsOverlay').then(m => ({ default: m.ShortcutsOverlay }))
+  import('./components/ui/ShortcutsOverlay').then(m => ({ default: m.ShortcutsOverlay }))
 );
 // 2. Dashboard — 1188-line route, only loaded on dashboard view
-const Dashboard    = lazy(() => import('./components/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
 // --- MONOCHROME ANIMATED LOGO ---
 const VectraAnimatedLogo = () => (
-  <svg width="120" height="120" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-[logo-float_3s_ease-in-out_infinite]">
+  <svg width="160" height="160" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-[logo-float_4s_ease-in-out_infinite]">
     <svg x="6" y="6" width="28" height="28" viewBox="0 0 24 24">
       {/* 1. Left Leg (Dashed) */}
       <path
         d="m5 6 7 14"
         stroke="white"
-        strokeWidth="2.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeDasharray="3 3"
-        className="animate-[dash-flow_1s_linear_infinite]"
+        className="animate-[dash-flow_1.5s_linear_infinite]"
       />
 
       {/* 2. Right Leg (Solid) */}
       <path
         d="m12 20 7-14"
         stroke="white"
-        strokeWidth="2.5"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeDasharray="24"
         strokeDashoffset="24"
-        className="animate-[draw-path_2s_ease-out_infinite]"
+        className="animate-[draw-path_2.5s_ease-in-out_infinite]"
       />
 
       {/* 3. Dots */}
       <circle
         cx="5" cy="6" r="1.5" fill="white"
-        className="animate-[pop-in_2s_ease-in-out_infinite]"
+        className="animate-[pop-in_2.5s_ease-in-out_infinite]"
         style={{ animationDelay: '0s', transformOrigin: 'center' }}
       />
       <circle
         cx="19" cy="6" r="1.5" fill="white"
-        className="animate-[pop-in_2s_ease-in-out_infinite]"
-        style={{ animationDelay: '0.3s', transformOrigin: 'center' }}
+        className="animate-[pop-in_2.5s_ease-in-out_infinite]"
+        style={{ animationDelay: '0.4s', transformOrigin: 'center' }}
       />
 
       {/* 4. Center Anchor */}
       <path
         fill="white" d="M10.5 18.5h3v3h-3z"
-        className="animate-pulse"
       />
     </svg>
   </svg>
 );
 
-// --- MONOCHROME LOADING SCREEN ---
+// --- CLEAN LOADING SCREEN ---
 const LoadingScreen = ({ message = "INITIALIZING ENVIRONMENT" }) => (
-  <div className="w-full h-screen bg-[#09090b] flex flex-col items-center justify-center gap-8 z-9999 fixed inset-0">
-    {/* Subtle Glow (White/Gray instead of Purple) */}
-    <div className="absolute w-[500px] h-[500px] bg-white/5 rounded-full blur-[100px] animate-pulse" />
-
+  <div className="w-full h-screen bg-[#000000] flex flex-col items-center justify-center gap-12 z-9999 fixed inset-0">
     {/* Logo */}
     <div className="relative z-10">
       <VectraAnimatedLogo />
     </div>
 
-    {/* Loading Bar & Text */}
-    <div className="flex flex-col items-center gap-4 z-10">
-      <div className="w-48 h-[2px] bg-[#27272a] rounded-full overflow-hidden">
-        <div className="h-full bg-white w-1/3 animate-[shimmer_1s_infinite_linear] rounded-full relative">
-          <div className="absolute inset-0 bg-linear-to-r from-transparent via-white to-transparent opacity-50" />
-        </div>
+    {/* Modern Triple-Square Loader & Text */}
+    <div className="flex flex-col items-center gap-6 z-10 mt-2">
+      <div className="flex items-center gap-2.5">
+        <div className="w-1.5 h-1.5 bg-[#e4e4e7] rounded-xs animate-[pulse_1s_ease-in-out_infinite]" style={{ animationDelay: '0ms' }} />
+        <div className="w-1.5 h-1.5 bg-[#e4e4e7] rounded-xs animate-[pulse_1s_ease-in-out_infinite]" style={{ animationDelay: '200ms' }} />
+        <div className="w-1.5 h-1.5 bg-[#e4e4e7] rounded-xs animate-[pulse_1s_ease-in-out_infinite]" style={{ animationDelay: '400ms' }} />
       </div>
-      <span className="text-[10px] font-bold text-[#52525b] tracking-[0.2em] uppercase font-mono text-center px-4">
+      <span className="text-[10px] font-medium text-[#71717a] tracking-[0.35em] uppercase font-mono text-center">
         {message}
       </span>
     </div>
@@ -96,8 +92,8 @@ const LoadingScreen = ({ message = "INITIALIZING ENVIRONMENT" }) => (
 
 const EditorLayout = () => {
   const { history, deleteElement, duplicateElement, selectedId, setSelectedId, setActivePanel,
-          elementsRef, updateProject, pushHistory, projectName, importPage, parentMap,
-          runAI   // ← template auto-generation (P3A)
+    elementsRef, updateProject, pushHistory, projectName, importPage, parentMap,
+    runAI   // ← template auto-generation (P3A)
   } = useEditor();
   const { selectedIds, clearSelection, addToSelection } = useUI();
   const { status } = useContainer();
@@ -180,11 +176,11 @@ const EditorLayout = () => {
         if (String(s.position ?? '') === 'absolute') {
           // ── Original absolute-positioned nudge (UX-2 PERMANENT) ────────────
           const left = parseFloat(String(s.left ?? '0'));
-          const top  = parseFloat(String(s.top  ?? '0'));
-          const newLeft = e.key === 'ArrowLeft'  ? left - NUDGE
-                        : e.key === 'ArrowRight' ? left + NUDGE : left;
-          const newTop  = e.key === 'ArrowUp'    ? top  - NUDGE
-                        : e.key === 'ArrowDown'  ? top  + NUDGE : top;
+          const top = parseFloat(String(s.top ?? '0'));
+          const newLeft = e.key === 'ArrowLeft' ? left - NUDGE
+            : e.key === 'ArrowRight' ? left + NUDGE : left;
+          const newTop = e.key === 'ArrowUp' ? top - NUDGE
+            : e.key === 'ArrowDown' ? top + NUDGE : top;
           nudgeActiveRef.current = true;
           updateProject({
             ...elementsRef.current,
@@ -262,7 +258,7 @@ const EditorLayout = () => {
               const idMap = new Map<string, string>();
               const walk = (id: string) => {
                 const node = src[id]; if (!node) return;
-                idMap.set(id, `el-${crypto.randomUUID().replace(/-/g,'').slice(0,12)}`);
+                idMap.set(id, `el-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`);
                 (node.children || []).forEach(walk);
               };
               walk(srcId);
@@ -309,11 +305,11 @@ const EditorLayout = () => {
           const el = cur[id];
           if (!el?.props?.style) continue;
           const s = el.props.style as Record<string, string | number>;
-          const l = parseFloat(String(s.left   ?? 0));
-          const t = parseFloat(String(s.top    ?? 0));
-          const w = parseFloat(String(s.width  ?? 100));
+          const l = parseFloat(String(s.left ?? 0));
+          const t = parseFloat(String(s.top ?? 0));
+          const w = parseFloat(String(s.width ?? 100));
           const h = parseFloat(String(s.height ?? (s.minHeight ?? 100)));
-          minX = Math.min(minX, l);     minY = Math.min(minY, t);
+          minX = Math.min(minX, l); minY = Math.min(minY, t);
           maxX = Math.max(maxX, l + w); maxY = Math.max(maxY, t + h);
         }
         if (!isFinite(minX)) return; // no parsable positions
@@ -336,9 +332,9 @@ const EditorLayout = () => {
             className: '',
             style: {
               position: 'absolute',
-              left:   `${minX}px`,
-              top:    `${minY}px`,
-              width:  `${groupW}px`,
+              left: `${minX}px`,
+              top: `${minY}px`,
+              width: `${groupW}px`,
               height: `${groupH}px`,
             },
           },
@@ -350,7 +346,7 @@ const EditorLayout = () => {
           if (!el) continue;
           const s = (el.props?.style ?? {}) as Record<string, string | number>;
           const relLeft = parseFloat(String(s.left ?? 0)) - minX;
-          const relTop  = parseFloat(String(s.top  ?? 0)) - minY;
+          const relTop = parseFloat(String(s.top ?? 0)) - minY;
           next[id] = {
             ...el,
             props: { ...el.props, style: { ...el.props.style, left: `${relLeft}px`, top: `${relTop}px` } },
