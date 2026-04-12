@@ -39,7 +39,7 @@ const wrapForZipNext = (rawCode: string): string => {
   // Strip any existing 'use client' to avoid duplication
   const cleanCode = rawCode
     .trimStart()
-    .replace(/^['"](use client)['"];?\s*/m, '')
+    .replace(/^['"](use client)['"](;)?\r?\n?/, '')
     .trimStart();
   return `'use client';
 
@@ -358,7 +358,7 @@ export const generateProjectCode = (
     let jsxContent = '';
     if (rootFrameId) {
       if (project[rootFrameId].children) {
-        jsxContent = project[rootFrameId].children!.map((cid: string) => generateNodeCode(cid, project, imports, 4)).join('');
+        jsxContent = project[rootFrameId].children!.map((cid: string) => generateNodeCode(cid, project, imports, 4, 'vite')).join('');
       }
     } else {
       jsxContent = `        <div className="text-center p-10">Empty Page</div>`;
@@ -408,6 +408,161 @@ export default function App() {
     </BrowserRouter>
   );
 }`;
+
+  // ── Vite infrastructure files ──────────────────────────────────────────────
+  files['package.json'] = JSON.stringify({
+    name: 'vectra-app',
+    version: '0.1.0',
+    private: true,
+    type: 'module',
+    scripts: {
+      dev: 'vite',
+      build: 'vite build',
+      preview: 'vite preview',
+    },
+    dependencies: {
+      react: '^18.3.1',
+      'react-dom': '^18.3.1',
+      'react-router-dom': '^6.14.1',
+      'lucide-react': '^0.577.0',
+      'framer-motion': '^11.3.0',
+      clsx: '^2.0.0',
+      'tailwind-merge': '^2.0.0',
+    },
+    devDependencies: {
+      '@vitejs/plugin-react-swc': '^3.5.0',
+      '@types/react': '^18',
+      '@types/react-dom': '^18',
+      typescript: '^5',
+      tailwindcss: '^3.4.1',
+      autoprefixer: '^10.0.1',
+      postcss: '^8',
+      vite: '^5.3.1',
+    },
+  }, null, 2);
+
+  files['vite.config.ts'] = `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+
+export default defineConfig({
+  plugins: [react()],
+});
+`;
+
+  files['index.html'] = `<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vectra App</title>
+  </head>
+  <body class="dark bg-black text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+`;
+
+  files['src/main.tsx'] = `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+`;
+
+  files['src/index.css'] = [
+    '@tailwind base;',
+    '@tailwind components;',
+    '@tailwind utilities;',
+    '',
+    '@layer base {',
+    '  * { box-sizing: border-box; }',
+    '  html { scroll-behavior: smooth; }',
+    '  body {',
+    '    background-color: #000000;',
+    '    color: #ffffff;',
+    "    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;",
+    '    -webkit-font-smoothing: antialiased;',
+    '  }',
+    '}',
+    '',
+    '::-webkit-scrollbar { width: 6px; }',
+    '::-webkit-scrollbar-track { background: #1a1a1a; }',
+    '::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }',
+    '::-webkit-scrollbar-thumb:hover { background: #52525b; }',
+  ].join('\n') + '\n';
+
+  files['src/lib/utils.ts'] = `import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+`;
+
+  files['tsconfig.json'] = JSON.stringify({
+    compilerOptions: {
+      target: 'ES2020',
+      useDefineForClassFields: true,
+      lib: ['ES2020', 'DOM', 'DOM.Iterable'],
+      module: 'ESNext',
+      skipLibCheck: true,
+      moduleResolution: 'bundler',
+      allowImportingTsExtensions: true,
+      resolveJsonModule: true,
+      isolatedModules: true,
+      noEmit: true,
+      jsx: 'react-jsx',
+      strict: true,
+      noUnusedLocals: false,
+      noUnusedParameters: false,
+      noFallthroughCasesInSwitch: true,
+    },
+    include: ['src'],
+    references: [{ path: './tsconfig.node.json' }],
+  }, null, 2);
+
+  files['tsconfig.node.json'] = JSON.stringify({
+    compilerOptions: {
+      composite: true,
+      skipLibCheck: true,
+      module: 'ESNext',
+      moduleResolution: 'bundler',
+      allowSyntheticDefaultImports: true,
+    },
+    include: ['vite.config.ts'],
+  }, null, 2);
+
+  files['tailwind.config.js'] = `/** @type {import('tailwindcss').Config} */
+export default {
+  darkMode: 'class',
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
+  theme: { extend: {} },
+  plugins: [],
+};
+`;
+
+  files['postcss.config.js'] = `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+`;
+
+  files['.gitignore'] = `node_modules/\ndist/\n.env\n.env.local\n.DS_Store\n`;
+
+  files['.env.local'] = `# Add your environment variables here\n`;
+
+  files['README.md'] = `# Vectra App\n\nBuilt with [Vectra](https://vectra.dev).\n\n## Getting Started\n\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\`\n\nThen open [http://localhost:5173](http://localhost:5173).\n`;
 
   return { files, dependencies: allDependencies };
 };
@@ -1322,8 +1477,21 @@ export const generateNextProjectCode = (
 
   const safePages = deduplicatePageSlugs(pages);
 
+  // R2 FIX: Guard slugs that collide with Next.js App Router reserved directories.
+  // These cause file conflicts that break `next build` silently.
+  const NEXT_RESERVED = new Set(['api', '_next', '_app', 'static', 'public', 'favicon']);
+  const guardedPages = safePages.map(page => {
+    const slug = page.slug.replace(/^\/+/, '').split('/')[0].toLowerCase();
+    if (NEXT_RESERVED.has(slug)) {
+      const fixed = `/${page.slug.replace(/^\/+/, '')}-page`;
+      console.warn(`[Vectra] Reserved slug "${page.slug}" renamed to "${fixed}" in export.`);
+      return { ...page, slug: fixed };
+    }
+    return page;
+  });
+
   // ── 1. Page files ──────────────────────────────────────────────────────────
-  safePages.forEach(page => {
+  guardedPages.forEach(page => {
     files[slugToNextPath(page.slug)] = generateNextPage(page, project);
   });
 
@@ -1332,7 +1500,7 @@ export const generateNextProjectCode = (
   // (SiteNav) must be skipped entirely AND layout.tsx must not auto-inject one.
   // Running detection before both writes ensures consistency.
   const aiSectionNames = new Set<string>();
-  safePages.forEach(page => {
+  guardedPages.forEach(page => {
     const pageRoot = project[page.rootId];
     if (!pageRoot) return;
     const canvasFrameId = pageRoot.children?.find(
@@ -1349,12 +1517,12 @@ export const generateNextProjectCode = (
 
   // ── 2. Root layout — zipMode:true activates tokens.css import (E4 fix) ────
   // skipNavbar=true when AI provides navigation — prevents double navbar.
-  files['app/layout.tsx'] = generateRootLayout(safePages, undefined, true, hasAINavbar);
+  files['app/layout.tsx'] = generateRootLayout(guardedPages, undefined, true, hasAINavbar);
 
   // ── 3. Multi-page SiteNav — only when no AI navbar exists ─────────────────
   // Named SiteNav to avoid colliding with any AI component named Navbar.
-  if (safePages.length > 1 && !hasAINavbar) {
-    files['components/SiteNav.tsx'] = generateNextNavbar(safePages);
+  if (guardedPages.length > 1 && !hasAINavbar) {
+    files['components/SiteNav.tsx'] = generateNextNavbar(guardedPages);
   }
 
   // ── 4. Next.js convention files ────────────────────────────────────────────
@@ -1367,7 +1535,7 @@ export const generateNextProjectCode = (
   // Deduplication: a component used on multiple pages is only written once.
   const writtenComponents = new Set<string>();
 
-  safePages.forEach(page => {
+  guardedPages.forEach(page => {
     const pageRoot = project[page.rootId];
     if (!pageRoot) return;
 
@@ -1422,7 +1590,7 @@ export function cn(...inputs: ClassValue[]) {
       react: '^18.3.1',
       'react-dom': '^18.3.1',
       'lucide-react': '^0.577.0',
-      'framer-motion': '^10.16.4',
+      'framer-motion': '^11.3.0',
       clsx: '^2.0.0',
       'tailwind-merge': '^2.0.0',
     },
