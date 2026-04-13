@@ -17,7 +17,7 @@ import {
     Code2, Wand2, Clipboard, ClipboardCheck, TerminalSquare, Loader2,
     Sparkles,
 } from 'lucide-react';
-import { fixComponentError } from '../../services/aiAgent';
+import { fixComponentError, editSection } from '../../services/aiAgent';
 import { validateJsx } from '../../hooks/useWasmEngine'; // ENGINE v0.2: syntax-only Rust check (~5ms)
 import { cn } from '../../lib/utils';
 import {
@@ -668,7 +668,37 @@ export const RightSidebar = () => {
                         isRefiningRef.current = true;
                         setIsRefining(true);
                         try {
-                            await runAI(`Edit ${sectionName}: ${p}`);
+                            const currentCode = (element as any).code as string | undefined;
+
+                            if (currentCode && currentCode.trim().length > 0) {
+                                // EDIT PATH: existing code → /api/ai/fix/edit → get modified code back.
+                                // Preserves the existing design and applies only the requested change.
+                                // Much faster than full generation — no mergeAIContent pass needed.
+                                const editedCode = await editSection(currentCode, p);
+                                if (editedCode) {
+                                    setElements(cur => {
+                                        if (!cur[element.id]) return cur;
+                                        return {
+                                            ...cur,
+                                            [element.id]: {
+                                                ...cur[element.id],
+                                                code: editedCode,
+                                            },
+                                        };
+                                    });
+                                    // Single history push after edit (NM-7 pattern)
+                                    setTimeout(() => pushHistory(elementsRef.current), 0);
+                                }
+                            } else {
+                                // FALLBACK: no existing code → use original runAI generation path
+                                await runAI(`Edit ${sectionName}: ${p}`);
+                            }
+                        } catch (err: any) {
+                            console.error('[RightSidebar] Section edit failed:', err.message);
+                            // Fallback to runAI on server error so the user still gets a result
+                            try {
+                                await runAI(`Edit ${sectionName}: ${p}`);
+                            } catch { /* silent — user can retry */ }
                         } finally {
                             setIsRefining(false);
                             isRefiningRef.current = false;
@@ -681,8 +711,16 @@ export const RightSidebar = () => {
                         : handleRefine(`Rebuild this section completely with a fresh design`);
 
                     const QUICK_EDITS = [
-                        'Make it darker', 'Add animations', 'Glassmorphism style',
-                        'More padding', 'Bold typography', 'Add gradient background',
+                        'Make background darker',
+                        'Make text larger',
+                        'Change buttons to blue',
+                        'Add hover animations',
+                        'More vertical padding',
+                        'Glassmorphism style',
+                        'Bold typography',
+                        'Add gradient background',
+                        'Make it minimal/clean',
+                        'Increase contrast',
                     ];
 
                     return (

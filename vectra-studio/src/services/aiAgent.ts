@@ -965,6 +965,43 @@ The output is consumed directly by a Babel compiler — any non-code text causes
 };
 
 // ─── MAIN EXPORT ──────────────────────────────────────────────────────────────
+
+/**
+ * editSection — Modifies an existing AI section via a natural-language instruction.
+ *
+ * ARCHITECTURE: Unlike generateWithAI (prompt → new elements), this sends the
+ * CURRENT component code to the server and gets back a minimally-edited version.
+ * The caller applies the result directly to element.code — no mergeAIContent needed.
+ *
+ * Used by: RightSidebar handleRefine (quick chips + refine input)
+ */
+export const editSection = async (
+    currentCode: string,
+    instruction: string
+): Promise<string> => {
+    if (!AI_CONFIG.serverUrl) {
+        throw new Error('No server URL configured. Add VITE_SERVER_URL to .env');
+    }
+
+    const res = await fetch(`${AI_CONFIG.serverUrl}/api/ai/fix/edit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(AI_CONFIG.serverSecret ? { 'x-vectra-server-secret': AI_CONFIG.serverSecret } : {}),
+        },
+        body: JSON.stringify({ currentCode, instruction }),
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+        throw new Error((err as any).error ?? `Edit request failed (${res.status})`);
+    }
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    return data.editedCode ?? '';
+};
+
 export const generateWithAI = async (
     prompt: string,
     currentElements: VectraProject,

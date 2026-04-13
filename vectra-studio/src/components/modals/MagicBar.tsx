@@ -87,6 +87,15 @@ const MODEL_OPTIONS = [
         icon:     'Sparkles',
     },
     {
+        id:       'glm5.1-cloud',
+        label:    'GLM-5.1 Cloud',
+        sublabel: 'Ollama • Local',
+        model:    'ollama:glm-5.1:cloud',
+        color:    '#0ea5e9',  // light blue
+        provider: 'local',
+        icon:     'Sparkles',
+    },
+    {
         id:       'minimax',
         label:    'MiniMax M2.7',
         sublabel: 'Ollama • Local',
@@ -568,15 +577,18 @@ export const MagicBar = () => {
                                             animate={{ opacity: 1, y: 0, scale: 1 }}
                                             exit={{ opacity: 0, y: 6, scale: 0.97 }}
                                             transition={{ duration: 0.15 }}
-                                            className="absolute bottom-full left-0 mb-2 w-[340px] bg-[#111113] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
+                                            className="absolute bottom-full left-0 mb-2 w-[280px] bg-[#111113] border border-white/10 rounded-xl shadow-2xl overflow-hidden flex flex-col"
                                         >
                                             {/* Header */}
-                                            <div className="px-3 py-2 border-b border-white/5 flex items-center gap-2">
-                                                <Sparkles size={10} className="text-zinc-600" />
-                                                <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest">Select AI Model</span>
+                                            <div className="px-3 py-2 border-b border-white/5 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles size={10} className="text-zinc-500" />
+                                                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Select AI Model</span>
+                                                </div>
+                                                <span className="text-[9px] text-zinc-500 font-mono">{MODEL_OPTIONS.length} Models</span>
                                             </div>
-                                            {/* Model grid */}
-                                            <div className="grid grid-cols-3 gap-1 p-2">
+                                            {/* Vertical Model List */}
+                                            <div className="flex flex-col gap-1 p-2 max-h-[300px] overflow-y-auto custom-scrollbar">
                                                 {MODEL_OPTIONS.map(opt => {
                                                     const isActive = opt.id === selectedModelId;
                                                     const Icon = iconMap[opt.icon] ?? Cpu;
@@ -593,37 +605,38 @@ export const MagicBar = () => {
                                                                 borderColor: opt.color + '55',
                                                                 background:  opt.color + '15',
                                                             } : {}}
-                                                            className={`relative flex flex-col items-start gap-1 p-2 rounded-lg border text-left transition-all ${
+                                                            className={`relative flex items-center gap-3 p-2 rounded-lg border text-left transition-all ${
                                                                 isActive
-                                                                    ? 'shadow-sm'
-                                                                    : 'border-white/5 hover:border-white/10 hover:bg-white/5'
+                                                                    ? 'shadow-sm border-transparent'
+                                                                    : 'border-transparent hover:border-white/10 hover:bg-white/5'
                                                             }`}
                                                         >
-                                                            {/* Icon + active dot */}
-                                                            <div className="flex items-center justify-between w-full">
-                                                                <div
-                                                                    style={{ background: opt.color + '20', color: opt.color }}
-                                                                    className="w-6 h-6 rounded-md flex items-center justify-center"
-                                                                >
-                                                                    <Icon size={11} />
-                                                                </div>
-                                                                {isActive && (
-                                                                    <span
-                                                                        style={{ background: opt.color }}
-                                                                        className="w-1.5 h-1.5 rounded-full"
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            {/* Name + sublabel */}
-                                                            <span
-                                                                style={isActive ? { color: opt.color } : {}}
-                                                                className={`text-[10px] font-bold leading-tight ${ isActive ? '' : 'text-zinc-400' }`}
+                                                            {/* Icon */}
+                                                            <div
+                                                                style={{ background: opt.color + '20', color: opt.color }}
+                                                                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
                                                             >
-                                                                {opt.label}
-                                                            </span>
-                                                            <span className="text-[8px] text-zinc-600 leading-tight">
-                                                                {opt.sublabel}
-                                                            </span>
+                                                                <Icon size={14} />
+                                                            </div>
+                                                            {/* Details */}
+                                                            <div className="flex flex-col flex-1 overflow-hidden">
+                                                                <span
+                                                                    style={isActive ? { color: opt.color } : {}}
+                                                                    className={`text-[11px] font-bold leading-tight truncate ${isActive ? '' : 'text-zinc-300'}`}
+                                                                >
+                                                                    {opt.label}
+                                                                </span>
+                                                                <span className="text-[9px] text-zinc-500 font-mono truncate">
+                                                                    {opt.sublabel}
+                                                                </span>
+                                                            </div>
+                                                            {/* Active dot */}
+                                                            {isActive && (
+                                                                <span
+                                                                    style={{ background: opt.color }}
+                                                                    className="w-1.5 h-1.5 rounded-full ml-auto shrink-0"
+                                                                />
+                                                            )}
                                                         </button>
                                                     );
                                                 })}

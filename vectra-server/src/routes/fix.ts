@@ -127,3 +127,97 @@ fixRoute.post('/', async (c) => {
     return c.json<FixResponse>({ error: msg }, 502);
   }
 });
+
+// ─── EDIT HANDLER ─────────────────────────────────────────────────────────────
+// POST /api/ai/fix/edit — modifies an existing section based on an instruction.
+// Unlike /api/ai/generate, this receives the CURRENT code and returns only
+// the modified version. The Studio applies it directly to element.code.
+
+const EDIT_SYSTEM_PROMPT = `VECTRA SECTION EDITOR
+
+You receive an existing React section component and an edit instruction.
+Your job: apply the edit precisely and return the complete modified component.
+
+════════════════════════════════════════════════════════════════
+RULES
+
+1. Return ONLY the complete modified code inside a single \`\`\`jsx block.
+2. Preserve everything not mentioned in the instruction — layout, animations,
+   existing text, other colors, the overall structure.
+3. NO import statements. React, motion, Lucide, cn are globally available.
+4. Keep the same export default function signature.
+5. Apply the edit minimally — change only what is asked.
+6. ZERO explanation text. The output feeds directly into a Babel compiler.
+
+════════════════════════════════════════════════════════════════
+COMMON EDITS — HOW TO APPLY THEM
+
+"change button color to X"
+  → Find all <button> elements and update their className bg-* color classes.
+
+"make text bigger / smaller"
+  → Update text-* size classes on the relevant elements.
+
+"change heading text to X"
+  → Find the <h1>/<h2> and update its text content.
+
+"make it darker / lighter"
+  → Adjust bg-* classes toward darker/lighter Tailwind shades.
+  → Add bg-opacity or change from-* to-* gradient stops.
+
+"remove the X" / "hide the X"
+  → Delete the JSX element or add hidden className.
+
+"add a Y"
+  → Insert the new element in the appropriate location.
+
+"make button text say X"
+  → Find the button content and update it.
+
+ICON RULE: Dynamic icons only as: const IC = (typeof Lucide[name] === 'function' ? Lucide[name] : null) || Lucide.Star; return <IC />;
+NEVER: <Lucide[name] /> in JSX.`;
+
+fixRoute.post('/edit', async (c) => {
+  let body: { currentCode: string; instruction: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid request body' }, 400);
+  }
+
+  const { currentCode, instruction } = body;
+  if (!currentCode || !instruction) {
+    return c.json({ error: 'currentCode and instruction are required' }, 400);
+  }
+
+  const activeKey = SERVER_AI_CONFIG.primaryApiKey || SERVER_AI_CONFIG.debuggerApiKey;
+  if (!activeKey) {
+    return c.json({ error: '🔑 No AI key on server' }, 500);
+  }
+
+  const userPrompt = `EDIT INSTRUCTION: ${instruction}\n\nCURRENT CODE:\n\`\`\`jsx\n${currentCode}\n\`\`\``;
+
+  try {
+    console.log(`[vectra-server/edit] Editing section — "${instruction.slice(0, 60)}"`);
+    const content = await callHF(
+      EDIT_SYSTEM_PROMPT,
+      userPrompt,
+      SERVER_AI_CONFIG.primaryModel,
+      activeKey,
+      0.3   // low temperature — precise edits, no creative drift
+    );
+
+    const match = content.match(/```(?:jsx?|tsx?|javascript|js|react)?\s*\n([\s\S]*?)\n```/i);
+    const editedCode = match ? match[1].trim() : content.trim();
+
+    if (!editedCode) throw new Error('Edit returned empty response');
+
+    console.log('[vectra-server/edit] ✓ Edit applied');
+    return c.json({ editedCode });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Edit failed';
+    console.error('[vectra-server/edit] Failed:', msg);
+    return c.json({ error: msg }, 502);
+  }
+});
+
