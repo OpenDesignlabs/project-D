@@ -35,7 +35,6 @@ dist-ssr
 vectra-engine/target/
 vectra-engine/*.log
 target/
-vectra-engine/pkg/
 docs/
 wasm-pack.log
 

@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "vite",
     "build:engine": "cd vectra-engine && wasm-pack build --target web --release",
-    "build": "pnpm run build:engine && tsc -b && vite build",
+    "build": "tsc -b && vite build",
     "build:full": "pnpm run build:engine && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
