@@ -289,7 +289,7 @@ export const RightSidebar = () => {
         const isCode = (element.type === 'custom_code' || element.type === 'custom_component') && !!element.code;
         // Switch to 'design' so the full property panel is visible immediately.
         // Users can still switch to AI/Code tabs via the tab bar buttons.
-        if (isCode) { setActiveTab('design'); return; }
+        if (isCode) { setActiveTab('ai'); return; }
     }, [element?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Code Tab: commitCode ────────────────────────────────────────────────── declared HERE, before ALL early returns. useCallback must never appear after an early return — React counts hooks
@@ -655,10 +655,7 @@ export const RightSidebar = () => {
                 {activeTab === 'ai' && isCodeNode && element && (() => {
                     const src = (element as any).aiSource as AiSourceMeta | undefined;
                     const age = src ? Date.now() - src.generatedAt : 0;
-                    const ageLabel = age < 60_000 ? 'just now'
-                        : age < 3_600_000 ? `${Math.floor(age / 60_000)}m ago`
-                        : `${Math.floor(age / 3_600_000)}h ago`;
-                    const modelShort = src?.model?.split('/').pop() ?? src?.model ?? '';
+                    void age; // computed for future use (e.g. tooltip)
 
                     const sectionName = src?.sectionName ?? element.name ?? 'Section';
 
@@ -710,133 +707,186 @@ export const RightSidebar = () => {
                         ? handleRefine(`Regenerate this section. Original prompt: "${src.prompt}"`)
                         : handleRefine(`Rebuild this section completely with a fresh design`);
 
-                    const QUICK_EDITS = [
-                        'Make background darker',
-                        'Make text larger',
-                        'Change buttons to blue',
-                        'Add hover animations',
-                        'More vertical padding',
-                        'Glassmorphism style',
-                        'Bold typography',
-                        'Add gradient background',
-                        'Make it minimal/clean',
-                        'Increase contrast',
-                    ];
 
                     return (
                         <div className="flex flex-col h-full overflow-y-auto custom-scrollbar">
-                            {/* Origin badge — shown for aiSource nodes, condensed header for plain custom_code */}
-                            <div className="p-3 border-b border-[#252526]">
-                                <div className="flex items-center gap-2 mb-2.5">
-                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${src ? 'bg-violet-500/20 border border-violet-500/30' : 'bg-blue-500/20 border border-blue-500/30'}`}>
-                                        <Sparkles size={11} className={src ? 'text-violet-400' : 'text-blue-400'} />
-                                    </div>
-                                    <div>
-                                        <p className={`text-[11px] font-bold ${src ? 'text-violet-300' : 'text-blue-300'}`}>
-                                            {src ? 'AI Section' : 'Custom Component'}
-                                        </p>
-                                        <p className="text-[9px] text-zinc-600">{sectionName}</p>
-                                    </div>
-                                    {src && (
-                                        <div className="ml-auto text-right">
-                                            <p className="text-[9px] font-mono text-zinc-700">{modelShort}</p>
-                                            <p className="text-[9px] text-zinc-700">{ageLabel}</p>
-                                        </div>
-                                    )}
+
+                            {/* ── HEADER: section identity ──────────────────────────────────── */}
+                            <div className="px-3 py-2.5 border-b border-[#252526] flex items-center gap-2">
+                                <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${src ? 'bg-violet-500/20' : 'bg-blue-500/20'}`}>
+                                    <Sparkles size={10} className={src ? 'text-violet-400' : 'text-blue-400'} />
                                 </div>
-                                {src && (
-                                    <div className="bg-[#111] border border-[#2a2a2c] rounded-lg p-2">
-                                        <p className="text-[9px] text-zinc-600 uppercase tracking-wider mb-1 font-bold">Original prompt</p>
-                                        <p className="text-[10px] text-zinc-400 italic leading-relaxed">
-                                            "{src.prompt.length > 120 ? src.prompt.slice(0, 120) + '…' : src.prompt}"
-                                        </p>
-                                    </div>
-                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[11px] font-bold text-white truncate">{sectionName}</p>
+                                    {src && <p className="text-[9px] text-zinc-600 truncate">"{src.prompt.length > 60 ? src.prompt.slice(0, 60) + '…' : src.prompt}"</p>}
+                                </div>
+                                <button
+                                    onClick={handleRegenerate}
+                                    disabled={isRefining}
+                                    title="Regenerate this section"
+                                    className="shrink-0 px-2 py-1 rounded text-[9px] font-bold text-zinc-500 hover:text-white hover:bg-white/8 border border-transparent hover:border-white/10 transition-all disabled:opacity-40"
+                                >
+                                    {isRefining ? <Loader2 size={10} className="animate-spin" /> : '↻ Redo'}
+                                </button>
                             </div>
 
-                            {/* ── Visual Style Overrides ───────────────────────────────────────
-                                FIX-SIDEBAR-1: These controls apply CSS to the wrapper div that
-                                RenderNode places around the LiveComponent. They let users tweak
-                                the section's outer background, text color, and padding without
-                                touching the AI-generated code. Works for ALL custom_code nodes. */}
+                            {/* ── ZONE 1: DIRECT EDITS ────────────────────────────────────────
+                                 Structured controls that call editSection() with precise instructions.
+                                 No natural language needed — user picks from inputs + color pickers.    */}
                             <div className="p-3 border-b border-[#252526]">
-                                <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-bold mb-2.5">Visual Overrides</p>
-                                <div className="flex flex-col gap-2">
-                                    {/* Background */}
+                                <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-bold mb-2.5">Edit Content</p>
+
+                                {/* Text Editing — extract h1/h2/button text from code */}
+                                {(() => {
+                                    const code = (element as any).code as string || '';
+                                    // Extract first h1 text
+                                    const h1Match = code.match(/<h1[^>]*>([^<{]{3,80})<\/h1>/);
+                                    // Extract first h2 text
+                                    const h2Match = code.match(/<h2[^>]*>([^<{]{3,80})<\/h2>/);
+                                    // Extract first button text (non-icon buttons)
+                                    const btnMatch = code.match(/<button[^>]*>\s*([A-Za-z][^<{]{2,40}?)\s*<\/button>/);
+                                    // Extract first <p> text
+                                    const pMatch = code.match(/<p[^>]*>([^<{]{10,120})<\/p>/);
+
+                                    const fields = [
+                                        h1Match && { label: 'Heading', current: h1Match[1].trim(), instruction: (v: string) => `Change the main heading text to: "${v}"` },
+                                        h2Match && { label: 'Subheading', current: h2Match[1].trim(), instruction: (v: string) => `Change the subheading text to: "${v}"` },
+                                        btnMatch && { label: 'Button text', current: btnMatch[1].trim(), instruction: (v: string) => `Change the primary button text to: "${v}"` },
+                                        pMatch && { label: 'Body text', current: pMatch[1].trim().slice(0, 80), instruction: (v: string) => `Change the paragraph text to: "${v}"` },
+                                    ].filter(Boolean) as { label: string; current: string; instruction: (v: string) => string }[];
+
+                                    if (fields.length === 0) return (
+                                        <p className="text-[10px] text-zinc-600 italic">No editable text detected — use the refine input below.</p>
+                                    );
+
+                                    return (
+                                        <div className="flex flex-col gap-2">
+                                            {fields.map(({ label, current, instruction }) => (
+                                                <div key={label}>
+                                                    <label className="text-[9px] text-zinc-600 block mb-0.5">{label}</label>
+                                                    <input
+                                                        type="text"
+                                                        defaultValue={current}
+                                                        key={`${element.id}-${label}-${current.slice(0,10)}`}
+                                                        onBlur={e => {
+                                                            const newVal = e.target.value.trim();
+                                                            if (newVal && newVal !== current) handleRefine(instruction(newVal));
+                                                        }}
+                                                        onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                                                        disabled={isRefining}
+                                                        className="w-full bg-[#111] border border-[#2a2a2c] rounded px-2 py-1 text-[11px] text-white outline-none focus:border-[#444] placeholder-zinc-700 disabled:opacity-50"
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* ── ZONE 2: COLOR & STYLE CONTROLS ──────────────────────────── */}
+                            <div className="p-3 border-b border-[#252526]">
+                                <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-bold mb-2.5">Edit Style</p>
+                                <div className="flex flex-col gap-2.5">
+
+                                    {/* Primary button color */}
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] text-zinc-500">Background</span>
+                                        <span className="text-[10px] text-zinc-400">Button color</span>
                                         <div className="flex items-center gap-1.5">
+                                            {['#3b82f6','#8b5cf6','#ec4899','#10b981','#f59e0b','#ef4444','#ffffff'].map(c => (
+                                                <button
+                                                    key={c}
+                                                    title={c}
+                                                    disabled={isRefining}
+                                                    onClick={() => handleRefine(`Change the primary CTA button background color to ${c}`)}
+                                                    className="w-4 h-4 rounded-full border border-white/20 hover:scale-110 transition-transform disabled:opacity-40 shrink-0"
+                                                    style={{ background: c }}
+                                                />
+                                            ))}
                                             <input
                                                 type="color"
-                                                value={String(element.props?.style?.backgroundColor || '#000000')}
-                                                onChange={e => updateStyle('backgroundColor', e.target.value)}
-                                                className="w-6 h-6 rounded cursor-pointer border border-[#333] bg-transparent"
-                                                title="Override section background color"
+                                                disabled={isRefining}
+                                                defaultValue="#3b82f6"
+                                                onChange={_e => {/* debounced in onBlur */}}
+                                                onBlur={e => handleRefine(`Change the primary CTA button background color to ${e.target.value}`)}
+                                                className="w-5 h-5 rounded cursor-pointer border border-[#333] bg-transparent disabled:opacity-40"
+                                                title="Custom button color"
                                             />
-                                            <button
-                                                onClick={() => updateStyle('backgroundColor', '')}
-                                                className="text-[8px] text-zinc-700 hover:text-zinc-400 transition-colors px-1"
-                                                title="Clear override"
-                                            >✕</button>
                                         </div>
                                     </div>
-                                    {/* Text Color */}
+
+                                    {/* Background color */}
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] text-zinc-500">Text color</span>
+                                        <span className="text-[10px] text-zinc-400">Background</span>
                                         <div className="flex items-center gap-1.5">
+                                            {['#000000','#0f172a','#09090b','#18181b','#ffffff','#f8fafc'].map(c => (
+                                                <button
+                                                    key={c}
+                                                    title={c}
+                                                    disabled={isRefining}
+                                                    onClick={() => handleRefine(`Change the section background color to ${c}`)}
+                                                    className="w-4 h-4 rounded-full border border-white/20 hover:scale-110 transition-transform disabled:opacity-40 shrink-0"
+                                                    style={{ background: c }}
+                                                />
+                                            ))}
                                             <input
                                                 type="color"
-                                                value={String(element.props?.style?.color || '#ffffff')}
-                                                onChange={e => updateStyle('color', e.target.value)}
-                                                className="w-6 h-6 rounded cursor-pointer border border-[#333] bg-transparent"
-                                                title="Override section text color"
+                                                disabled={isRefining}
+                                                defaultValue="#000000"
+                                                onBlur={e => handleRefine(`Change the section background color to ${e.target.value}`)}
+                                                className="w-5 h-5 rounded cursor-pointer border border-[#333] bg-transparent disabled:opacity-40"
+                                                title="Custom background color"
                                             />
-                                            <button
-                                                onClick={() => updateStyle('color', '')}
-                                                className="text-[8px] text-zinc-700 hover:text-zinc-400 transition-colors px-1"
-                                                title="Clear override"
-                                            >✕</button>
                                         </div>
                                     </div>
-                                    {/* Padding */}
+
+                                    {/* Text size */}
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] text-zinc-500">Padding</span>
-                                        <input
-                                            type="text"
-                                            key={`pad-${element.id}`}
-                                            defaultValue={String(element.props?.style?.padding || '')}
-                                            onBlur={e => updateStyle('padding', e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                                            placeholder="e.g. 40px 0"
-                                            className="w-24 bg-[#111] border border-[#2a2a2c] rounded px-2 py-0.5 text-[10px] text-white outline-none focus:border-[#444] placeholder-zinc-700"
-                                        />
+                                        <span className="text-[10px] text-zinc-400">Text size</span>
+                                        <div className="flex gap-1">
+                                            {[['S','Make all text smaller'], ['M','Reset text to default size'], ['L','Make all text larger'], ['XL','Make all text much larger']].map(([label, instr]) => (
+                                                <button key={label} disabled={isRefining}
+                                                    onClick={() => handleRefine(instr as string)}
+                                                    className="px-2 py-0.5 rounded text-[10px] border border-[#2a2a2c] text-zinc-500 hover:text-white hover:border-[#444] transition-all disabled:opacity-40"
+                                                >{label}</button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    {/* Border radius */}
+
+                                    {/* Hover effect */}
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] text-zinc-500">Radius</span>
-                                        <input
-                                            type="text"
-                                            key={`rad-${element.id}`}
-                                            defaultValue={String(element.props?.style?.borderRadius || '')}
-                                            onBlur={e => updateStyle('borderRadius', e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                                            placeholder="e.g. 12px"
-                                            className="w-24 bg-[#111] border border-[#2a2a2c] rounded px-2 py-0.5 text-[10px] text-white outline-none focus:border-[#444] placeholder-zinc-700"
-                                        />
+                                        <span className="text-[10px] text-zinc-400">Button hover</span>
+                                        <div className="flex gap-1">
+                                            {[['Scale','Add hover scale-up animation to buttons'],['Glow','Add glowing shadow on button hover'],['Lift','Add lift (translateY) animation on button hover'],['None','Remove all hover animations from buttons']].map(([label, instr]) => (
+                                                <button key={label} disabled={isRefining}
+                                                    onClick={() => handleRefine(instr as string)}
+                                                    className="px-2 py-0.5 rounded text-[10px] border border-[#2a2a2c] text-zinc-500 hover:text-white hover:border-[#444] transition-all disabled:opacity-40"
+                                                >{label}</button>
+                                            ))}
+                                        </div>
                                     </div>
+
                                 </div>
                             </div>
 
-                            {/* Quick edits */}
+                            {/* ── ZONE 3: QUICK STYLE PRESETS ─────────────────────────────── */}
                             <div className="p-3 border-b border-[#252526]">
-                                <p className="text-[9px] text-zinc-700 uppercase tracking-wider font-bold mb-2">Quick edit</p>
+                                <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-bold mb-2">Style presets</p>
                                 <div className="flex flex-wrap gap-1.5">
-                                    {QUICK_EDITS.map(chip => (
+                                    {[
+                                        'Make background darker',
+                                        'Glassmorphism style',
+                                        'Add gradient background',
+                                        'Bold typography',
+                                        'More vertical padding',
+                                        'Minimal / clean',
+                                        'Add card shadows',
+                                        'Increase contrast',
+                                    ].map(chip => (
                                         <button
                                             key={chip}
                                             onClick={() => handleRefine(chip)}
                                             disabled={isRefining}
-                                            className="text-[9px] px-2 py-1 rounded-md border border-[#2a2a2c] bg-transparent text-zinc-500 hover:text-white hover:border-[#444] transition-all disabled:opacity-40"
+                                            className="text-[9px] px-2 py-1 rounded-md border border-[#2a2a2c] text-zinc-500 hover:text-white hover:border-[#444] transition-all disabled:opacity-40"
                                         >
                                             {chip}
                                         </button>
@@ -844,9 +894,9 @@ export const RightSidebar = () => {
                                 </div>
                             </div>
 
-                            {/* Refine prompt */}
-                            <div className="p-3 border-b border-[#252526]">
-                                <p className="text-[9px] text-zinc-700 uppercase tracking-wider font-bold mb-2">Refine this section</p>
+                            {/* ── ZONE 4: FREE-FORM REFINE ─────────────────────────────────── */}
+                            <div className="p-3">
+                                <p className="text-[9px] text-zinc-600 uppercase tracking-wider font-bold mb-2">Custom edit</p>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -854,7 +904,7 @@ export const RightSidebar = () => {
                                         onChange={e => setAiRefineInput(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') handleRefine(); }}
                                         disabled={isRefining}
-                                        placeholder="Describe a change…"
+                                        placeholder='e.g. "add a phone mockup image"'
                                         className="flex-1 bg-[#111] border border-[#2a2a2c] rounded-lg px-2.5 py-1.5 text-[11px] text-white placeholder-[#444] outline-none focus:border-violet-500/50 transition-colors disabled:opacity-50 font-sans"
                                     />
                                     <button
@@ -867,27 +917,11 @@ export const RightSidebar = () => {
                                             : <ArrowRight size={11} />}
                                     </button>
                                 </div>
+                                {isRefining && (
+                                    <p className="text-[9px] text-violet-400/70 mt-1.5 animate-pulse">Applying edit…</p>
+                                )}
                             </div>
 
-                            {/* Primary actions */}
-                            <div className="p-3 flex flex-col gap-2">
-                                <button
-                                    onClick={handleRegenerate}
-                                    disabled={isRefining}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600/15 border border-violet-500/25 text-violet-300 text-[11px] font-bold hover:bg-violet-600/25 hover:border-violet-500/40 transition-all disabled:opacity-40 active:scale-[0.98]"
-                                >
-                                    {isRefining
-                                        ? <><Loader2 size={12} className="animate-spin" /><span>Refining…</span></>
-                                        : <><Sparkles size={12} /><span>Regenerate section</span></>}
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('code')}
-                                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-[#2a2a2c] text-zinc-500 text-[11px] font-bold hover:text-zinc-300 hover:border-[#444] transition-all active:scale-[0.98]"
-                                >
-                                    <Code2 size={12} />
-                                    <span>View source code</span>
-                                </button>
-                            </div>
                         </div>
                     );
                 })()}
