@@ -45,7 +45,7 @@ app.route('/api/health',       healthRoute);
 app.route('/api/marketplace',  marketplaceRoute);
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-const PORT = parseInt(process.env.PORT ?? '3002', 10);
+const PORT = parseInt(process.env.PORT || '3002', 10) || 3002;
 
 const server = serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`\n🚀 Vectra Server running on http://localhost:${PORT}`);
