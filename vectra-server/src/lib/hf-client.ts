@@ -20,7 +20,7 @@
  */
 
 const HF_ENDPOINT   = 'https://router.huggingface.co/v1/chat/completions';
-const OLLAMA_URL    = process.env.OLLAMA_URL ?? 'http://localhost:11434';
+const OLLAMA_URL    = (process.env.OLLAMA_URL ?? 'http://localhost:11434').replace(/\/$/, '');
 const OLLAMA_ENDPOINT = `${OLLAMA_URL}/api/chat`;
 
 export const SERVER_AI_CONFIG = {
@@ -217,7 +217,10 @@ export async function callOllama(
 
   const res = await fetch(OLLAMA_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
     body: JSON.stringify({
       model,
       messages: [
@@ -251,7 +254,10 @@ export async function callOllamaStreaming(
 
   const res = await fetch(OLLAMA_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true'
+    },
     body: JSON.stringify({
       model,
       messages: [
