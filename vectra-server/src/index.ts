@@ -17,7 +17,7 @@ const app = new Hono();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 app.use('*', cors({
-  origin:       process.env.STUDIO_ORIGIN ?? 'http://localhost:5173',
+  origin: (origin) => origin || '*',
   allowMethods: ['GET', 'POST', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'x-vectra-server-secret'],
 }));

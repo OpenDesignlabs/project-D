@@ -19,8 +19,16 @@ function Start-Ollama {
     Start-Process -FilePath "pwsh" -ArgumentList "-Command", "ollama serve"
 }
 
+function Start-Ngrok {
+    Write-Host "Starting Ngrok Tunnel for Ollama..." -ForegroundColor Cyan
+    Start-Process -FilePath "pwsh" -ArgumentList "-Command", "ngrok http 11434 --host-header=`"localhost:11434`""
+}
+
 # Start Ollama first
 Start-Ollama
+Start-Sleep -Seconds 2
+
+Start-Ngrok
 Start-Sleep -Seconds 2
 
 # Add a slight delay between starts if needed, but otherwise start them all concurrently
