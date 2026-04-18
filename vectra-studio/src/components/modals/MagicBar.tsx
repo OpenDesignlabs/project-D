@@ -3,6 +3,7 @@ import { useEditor } from '../../context/EditorContext';
 import {
     Sparkles, ArrowRight, Loader2, CheckCircle2, XCircle, Zap,
     CheckCircle, Bot, Cpu, Code2, Brain, Wind, ChevronDown, Layers,
+    FileText, Globe, LayoutGrid,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,6 +18,54 @@ const FALLBACK_HINTS = [
 const HISTORY_KEY = 'vectra_prompt_history';
 const MAX_HISTORY = 12;
 const MODEL_KEY   = 'vectra_selected_model';
+const SITE_MODE_KEY = 'vectra_site_mode';
+
+// ─── SITE TYPE ────────────────────────────────────────────────────────────────
+
+type SiteMode = 'static' | 'multipage';
+
+const MULTI_PAGE_PRESETS = [
+    { name: 'About',     slug: '/about',     icon: '👤', default: true },
+    { name: 'Services',  slug: '/services',  icon: '⚡', default: true },
+    { name: 'Pricing',   slug: '/pricing',   icon: '💰', default: true },
+    { name: 'Contact',   slug: '/contact',   icon: '✉️', default: true },
+    { name: 'Blog',      slug: '/blog',      icon: '📝', default: false },
+    { name: 'Portfolio',  slug: '/portfolio', icon: '🎨', default: false },
+    { name: 'FAQ',       slug: '/faq',       icon: '❓', default: false },
+    { name: 'Team',      slug: '/team',       icon: '👥', default: false },
+    { name: 'Dashboard', slug: '/dashboard',  icon: '📊', default: false },
+] as const;
+
+const getStoredSiteMode = (): SiteMode => {
+    try { return (localStorage.getItem(SITE_MODE_KEY) as SiteMode) || 'static'; }
+    catch { return 'static'; }
+};
+
+/**
+ * buildMultiPagePrompt — Creates a page-specific AI prompt that incorporates
+ * the user's original description as thematic guidance. This ensures each
+ * generated page matches the overall site's style and purpose.
+ */
+const buildMultiPagePrompt = (pageName: string, userPrompt: string): string => {
+    const n = pageName.toLowerCase().trim();
+
+    // Page-specific section guidance
+    const pageGuide: Record<string, string> = {
+        about:     'Include: hero intro section, team grid (6 cards with photo placeholder/name/role), company values/mission section, and a brief timeline.',
+        pricing:   'Include: header, 3-tier pricing cards (Free/Pro/Enterprise) with feature lists and CTA buttons, FAQ accordion section.',
+        contact:   'Include: header, contact form (name/email/message + submit), contact info cards (email/phone/address), office map placeholder.',
+        blog:      'Include: header, search bar, featured post hero card, grid of 6 post preview cards with image/title/excerpt/date/category badge.',
+        faq:       'Include: header, category filter tabs, accordion FAQ list with 8+ questions, contact CTA at bottom.',
+        dashboard: 'Include: stats row (4 metric cards), recent activity table, chart placeholder cards (2 side by side), quick actions panel.',
+        portfolio: 'Include: hero intro, skills/tech badges, project grid (6 cards with image/title/tech stack), contact CTA.',
+        team:      'Include: header, leadership section (3 large cards), full team grid (8 cards with photo/name/role/social), hiring CTA.',
+        services:  'Include: header, 6 service cards with icons, process/how-it-works timeline, testimonials, contact CTA.',
+    };
+
+    const guide = pageGuide[n] || `Include appropriate sections for a ${pageName} page with hero, main content, and CTA.`;
+
+    return `Build a complete ${pageName} page for this site: "${userPrompt}". ${guide} Use dark theme, modern glassmorphism design, multiple well-styled sections. Match the style and branding of the Home page.`;
+};
 
 // Available AI model options
 // model: value stored in localStorage and sent to the server.
@@ -274,6 +323,7 @@ export const MagicBar = () => {
     const {
         isMagicBarOpen, setMagicBarOpen, runAI,
         elements, pages, activePageId,
+        addPage, switchPage,
     } = useEditor();
 
     const [input, setInput]   = useState('');
@@ -289,9 +339,29 @@ export const MagicBar = () => {
     // Model selector
     const [selectedModelId, setSelectedModelId] = useState<ModelId>(getStoredModelId);
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
+    // Site type selector
+    const [siteMode, setSiteMode] = useState<SiteMode>(getStoredSiteMode);
+    const [selectedPages, setSelectedPages] = useState<Set<string>>(
+        () => new Set(MULTI_PAGE_PRESETS.filter(p => p.default).map(p => p.name))
+    );
+    // Multi-page generation progress
+    const [multiPageProgress, setMultiPageProgress] = useState<{ current: number; total: number; pageName: string } | null>(null);
     // Per-stage timing
     const stageStartRef = useRef<number>(0);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    // ── Stable refs for async multi-page loop ─────────────────────────────────
+    // After addPage() changes activePageId, React creates a NEW runAI callback.
+    // The async handleSubmit still holds the OLD one (stale closure). Using refs
+    // ensures we always call the latest version of each function.
+    const runAIRef = useRef(runAI);
+    useEffect(() => { runAIRef.current = runAI; }, [runAI]);
+    const addPageRef = useRef(addPage);
+    useEffect(() => { addPageRef.current = addPage; }, [addPage]);
+    const switchPageRef = useRef(switchPage);
+    useEffect(() => { switchPageRef.current = switchPage; }, [switchPage]);
+    const pagesRef = useRef(pages);
+    useEffect(() => { pagesRef.current = pages; }, [pages]);
 
     // Focus / reset on open/close
     useEffect(() => {
@@ -303,8 +373,25 @@ export const MagicBar = () => {
             setStages(makeInitialStages());
             setHistoryIdx(-1);
             setModelPickerOpen(false);
+            setMultiPageProgress(null);
         }
     }, [isMagicBarOpen]);
+
+    // Toggle a page preset on/off
+    const togglePagePreset = useCallback((name: string) => {
+        setSelectedPages(prev => {
+            const next = new Set(prev);
+            if (next.has(name)) next.delete(name);
+            else next.add(name);
+            return next;
+        });
+    }, []);
+
+    // Persist site mode
+    const handleSiteModeChange = useCallback((mode: SiteMode) => {
+        setSiteMode(mode);
+        try { localStorage.setItem(SITE_MODE_KEY, mode); } catch { /* ignore */ }
+    }, []);
 
     // Contextual hints (unchanged canvas-aware logic)
     const contextualHints = useMemo((): string[] => {
@@ -405,6 +492,85 @@ export const MagicBar = () => {
         if (isRunning.current) return;
         isRunning.current = true;
 
+        // ── Multi-page mode ──────────────────────────────────────────────────
+        if (siteMode === 'multipage' && selectedPages.size > 0) {
+            try {
+                setStatus('thinking');
+                await new Promise(r => setTimeout(r, 120));
+
+                // Build the page list: Home (current page) + selected additional pages
+                const pagesToGenerate = ['Home', ...Array.from(selectedPages)];
+                const totalPages = pagesToGenerate.length;
+
+                setStatus('generating');
+                setStreamCharCount(0);
+
+                for (let i = 0; i < pagesToGenerate.length; i++) {
+                    const pageName = pagesToGenerate[i];
+                    setMultiPageProgress({ current: i + 1, total: totalPages, pageName });
+
+                    // Reset pipeline stages for each page
+                    const freshStages = makeInitialStages();
+                    freshStages[0] = { ...freshStages[0], status: 'done', ms: 80 };
+                    setStages(freshStages);
+                    stageStartRef.current = Date.now();
+
+                    if (i === 0) {
+                        // First page (Home) — generate on current active page
+                        const homePrompt = input.trim();
+                        await runAIRef.current(homePrompt);
+                    } else {
+                        // Additional pages — create, switch, wait for mount, then AI
+                        addPageRef.current(pageName);
+                        // Wait for page mount + canvas ready
+                        await new Promise(r => setTimeout(r, 600));
+
+                        // Build a context-aware prompt for this page type
+                        const pagePrompt = buildMultiPagePrompt(pageName, input.trim());
+                        await runAIRef.current(pagePrompt);
+                    }
+
+                    // Mark remaining stages done after each page completes
+                    setStages(prev => prev.map(s =>
+                        s.status === 'active' ? { ...s, status: 'done' } : s
+                    ));
+
+                    // Small cooldown between pages
+                    if (i < pagesToGenerate.length - 1) {
+                        await new Promise(r => setTimeout(r, 300));
+                    }
+                }
+
+                saveHistory(input);
+                setStatus('done');
+                setFeedback(`✅ Generated ${totalPages} pages successfully`);
+                setMultiPageProgress(null);
+
+                // Switch back to Home page so user sees the full site
+                const homePage = pagesRef.current.find(p => p.slug === '/');
+                if (homePage) switchPageRef.current(homePage.id);
+
+                setTimeout(() => {
+                    setMagicBarOpen(false);
+                    setInput('');
+                    isRunning.current = false;
+                }, 1800);
+            } catch (err: any) {
+                const msg = err?.message ?? 'Multi-page generation failed.';
+                setFeedback(msg);
+                setStatus('error');
+                setMultiPageProgress(null);
+                setTimeout(() => {
+                    setStatus('idle');
+                    setFeedback('');
+                    setStages(makeInitialStages());
+                    isRunning.current = false;
+                }, 3500);
+            }
+            return;
+        }
+
+        // ── Static (single-page) mode — original flow ────────────────────────
         try {
             setStatus('thinking');
             await new Promise(r => setTimeout(r, 120));
@@ -417,7 +583,7 @@ export const MagicBar = () => {
             setStreamCharCount(0);
             setStatus('generating');
 
-            const resultMessage = await runAI(input);
+            const resultMessage = await runAIRef.current(input);
 
             // Mark any still-active stages as done
             setStages(prev => prev.map(s =>
@@ -464,7 +630,9 @@ export const MagicBar = () => {
 
     if (!isMagicBarOpen) return null;
 
-    const streamProgress = Math.min(100, Math.round((streamCharCount / 4000) * 100));
+    const streamProgress = siteMode === 'multipage' && multiPageProgress
+        ? Math.round((multiPageProgress.current / multiPageProgress.total) * 100)
+        : Math.min(100, Math.round((streamCharCount / 4000) * 100));
 
     return (
         <AnimatePresence>
@@ -496,15 +664,17 @@ export const MagicBar = () => {
 
                     <form onSubmit={handleSubmit} className="relative">
                         {/* Header */}
-                        <div className="absolute top-4 left-4 flex items-center gap-2 text-blue-400 select-none pointer-events-none">
+                        <div className={`absolute top-4 left-4 flex items-center gap-2 select-none pointer-events-none ${
+                            siteMode === 'multipage' && status !== 'idle' ? 'text-violet-400' : 'text-blue-400'
+                        }`}>
                             <Sparkles
                                 size={16}
                                 className={status === 'thinking' || status === 'generating' ? 'animate-spin' : ''}
                             />
                             <span className="text-xs font-bold tracking-wider uppercase">
-                                {status === 'idle'       && 'Vectra AI'}
+                                {status === 'idle'       && (siteMode === 'multipage' ? 'Vectra AI · Multi-page' : 'Vectra AI')}
                                 {status === 'thinking'   && 'Analyzing…'}
-                                {status === 'generating' && 'Generating…'}
+                                {status === 'generating' && (multiPageProgress ? `Building Site… ${multiPageProgress.current}/${multiPageProgress.total}` : 'Generating…')}
                                 {status === 'done'       && 'Done'}
                                 {status === 'error'      && 'Failed'}
                             </span>
@@ -515,13 +685,46 @@ export const MagicBar = () => {
                         </div>
 
                         {/* Input */}
+                        {/* ── Site Type Toggle ────────────────────────────── */}
+                        {status === 'idle' && (
+                            <div className="absolute top-3 right-3 flex items-center gap-1 bg-[#111113] border border-white/8 rounded-lg p-0.5">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSiteModeChange('static')}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                                        siteMode === 'static'
+                                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                                            : 'text-zinc-500 hover:text-zinc-300'
+                                    }`}
+                                >
+                                    <Globe size={10} />
+                                    Static Site
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSiteModeChange('multipage')}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                                        siteMode === 'multipage'
+                                            ? 'bg-violet-600/20 text-violet-400 border border-violet-500/30'
+                                            : 'text-zinc-500 hover:text-zinc-300'
+                                    }`}
+                                >
+                                    <LayoutGrid size={10} />
+                                    Multi-page
+                                </button>
+                            </div>
+                        )}
+
                         <input
                             ref={inputRef}
                             type="text"
                             value={input}
                             onChange={e => { setInput(e.target.value); setHistoryIdx(-1); }}
                             onKeyDown={handleInputKeyDown}
-                            placeholder="Describe what to build or add…"
+                            placeholder={siteMode === 'multipage'
+                                ? 'Describe your site (e.g., SaaS landing page for a CRM tool)…'
+                                : 'Describe what to build or add…'
+                            }
                             className="w-full bg-transparent text-lg text-white placeholder-zinc-500 px-4 pt-12 pb-16 outline-none"
                             disabled={status !== 'idle'}
                         />
@@ -549,16 +752,22 @@ export const MagicBar = () => {
                             </button>
                             <button
                                 type="submit"
-                                disabled={status !== 'idle' || !input.trim()}
+                                disabled={status !== 'idle' || !input.trim() || (siteMode === 'multipage' && selectedPages.size === 0)}
                                 className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold text-white transition-all ${
-                                    status !== 'idle' || !input.trim()
+                                    status !== 'idle' || !input.trim() || (siteMode === 'multipage' && selectedPages.size === 0)
                                         ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/20'
+                                        : siteMode === 'multipage'
+                                            ? 'bg-violet-600 hover:bg-violet-500 shadow-lg shadow-violet-900/20'
+                                            : 'bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/20'
                                 }`}
                             >
                                 {status === 'idle'
-                                    ? <><span>Generate</span><ArrowRight size={14} /></>
-                                    : <><Loader2 size={14} className="animate-spin" /><span>Working…</span></>
+                                    ? siteMode === 'multipage'
+                                        ? <><LayoutGrid size={12} /><span>Generate {selectedPages.size + 1} Pages</span><ArrowRight size={14} /></>
+                                        : <><span>Generate</span><ArrowRight size={14} /></>
+                                    : multiPageProgress
+                                        ? <><Loader2 size={14} className="animate-spin" /><span>{multiPageProgress.pageName}… {multiPageProgress.current}/{multiPageProgress.total}</span></>
+                                        : <><Loader2 size={14} className="animate-spin" /><span>Working…</span></>
                                 }
                             </button>
                         </div>
@@ -673,15 +882,108 @@ export const MagicBar = () => {
 
                     {/* Live stage pipeline — shown during generation */}
                     {(status === 'generating' || status === 'thinking') && (
-                        <GenerationPipeline
-                            stages={stages}
-                            streamChars={streamCharCount}
-                            model={activeModel}
-                        />
+                        <>
+                            {/* Multi-page progress bar */}
+                            {multiPageProgress && (
+                                <div className="px-4 pt-3 pb-1">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <LayoutGrid size={11} className="text-violet-400" />
+                                            <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">
+                                                Multi-page Generation
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-zinc-500">
+                                            {multiPageProgress.current} / {multiPageProgress.total}
+                                        </span>
+                                    </div>
+                                    {/* Page progress dots */}
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                        {Array.from({ length: multiPageProgress.total }).map((_, i) => (
+                                            <div
+                                                key={i}
+                                                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                                                    i < multiPageProgress.current
+                                                        ? 'bg-violet-500'
+                                                        : i === multiPageProgress.current
+                                                            ? 'bg-violet-500/40 animate-pulse'
+                                                            : 'bg-zinc-800'
+                                                }`}
+                                            />
+                                        ))}
+                                    </div>
+                                    {/* Current page name */}
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <FileText size={10} className="text-zinc-500" />
+                                        <span className="text-[11px] text-zinc-400">
+                                            Generating <span className="text-white font-semibold">{multiPageProgress.pageName}</span> page…
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                            <GenerationPipeline
+                                stages={stages}
+                                streamChars={streamCharCount}
+                                model={activeModel}
+                            />
+                        </>
                     )}
 
-                    {/* Hint chips — idle + empty only */}
-                    {!input && status === 'idle' && (
+                    {/* ── Multi-page presets — shown when multipage mode + idle ──── */}
+                    {siteMode === 'multipage' && status === 'idle' && (
+                        <div className="px-4 pb-3 border-t border-white/5">
+                            <div className="flex items-center justify-between mt-2.5 mb-2">
+                                <div className="flex items-center gap-2">
+                                    <LayoutGrid size={10} className="text-violet-400" />
+                                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Pages to Generate</span>
+                                </div>
+                                <span className="text-[9px] text-zinc-600 font-mono">
+                                    {selectedPages.size + 1} pages (Home + {selectedPages.size})
+                                </span>
+                            </div>
+
+                            {/* Home — always included, non-removable */}
+                            <div className="flex flex-wrap gap-1.5">
+                                <div
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold
+                                               bg-blue-600/15 text-blue-400 border border-blue-500/25 cursor-default"
+                                >
+                                    <span>🏠</span>
+                                    <span>Home</span>
+                                    <span className="text-[8px] text-blue-500/60 font-mono ml-0.5">/</span>
+                                </div>
+
+                                {MULTI_PAGE_PRESETS.map(preset => {
+                                    const isActive = selectedPages.has(preset.name);
+                                    return (
+                                        <button
+                                            key={preset.name}
+                                            type="button"
+                                            onClick={() => togglePagePreset(preset.name)}
+                                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                                isActive
+                                                    ? 'bg-violet-600/15 text-violet-400 border-violet-500/25 hover:bg-violet-600/25'
+                                                    : 'bg-white/3 text-zinc-600 border-zinc-800 hover:text-zinc-400 hover:border-zinc-700'
+                                            }`}
+                                        >
+                                            <span>{preset.icon}</span>
+                                            <span>{preset.name}</span>
+                                            {isActive && (
+                                                <span className="text-[8px] text-violet-500/60 font-mono ml-0.5">{preset.slug}</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {selectedPages.size === 0 && (
+                                <p className="text-[9px] text-amber-500/60 mt-1.5">Select at least one additional page</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Hint chips — idle + empty + static mode only */}
+                    {!input && status === 'idle' && siteMode === 'static' && (
                         <div className="px-4 pb-4 flex flex-wrap gap-2">
                             {contextualHints.map(hint => (
                                 <button

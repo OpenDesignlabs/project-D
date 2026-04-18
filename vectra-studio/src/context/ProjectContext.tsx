@@ -266,6 +266,37 @@ const buildDefaultHandlerStub = (methods: HttpMethod[], routePath: string): stri
     return `// Next.js App Router — Route Handler\n// Path: /api/${routePath}\n// Docs: https://nextjs.org/docs/app/building-your-application/routing/route-handlers\nimport { NextRequest } from 'next/server';\n\n${handlers.join('\n\n')}\n`;
 };
 
+/**
+ * buildPagePrompt — Maps a page name to a focused AI generation prompt.
+ * Pure function (no side effects) — referenced by the vectra:generate-page event handler.
+ * Gives the AI specific section guidance per page type so output is relevant.
+ */
+const buildPagePrompt = (pageName: string): string => {
+    const n = pageName.toLowerCase().trim();
+    const map: Record<string, string> = {
+        about:     'Build a complete About page with: hero intro section, team grid (6 cards with photo placeholder/name/role), company values/mission section, and a brief timeline. Dark theme, modern glassmorphism.',
+        pricing:   'Build a complete Pricing page with: header, 3-tier pricing cards (Free/Pro/Enterprise) with feature lists and CTA buttons, FAQ accordion section at the bottom. Dark theme, gradient accents.',
+        contact:   'Build a complete Contact page with: header section, contact form (name/email/message fields + submit button), contact info cards (email/phone/address), and an office map placeholder. Dark theme.',
+        blog:      'Build a complete Blog listing page with: header, search bar, featured post hero card, grid of 6 post preview cards each with image placeholder/title/excerpt/date/category badge. Dark theme.',
+        faq:       'Build a complete FAQ page with: header section, category filter tabs (General/Billing/Technical), accordion FAQ list with at least 8 questions, and a contact CTA at the bottom. Dark theme.',
+        dashboard: 'Build a complete Dashboard page with: stats overview row (4 metric cards with icons and trend badges), recent activity table, chart placeholder cards (2 charts side by side), and quick actions panel. Dark theme.',
+        portfolio: 'Build a complete Portfolio page with: hero intro with name and role, skills/tech badges section, project grid (6 cards with image/title/tech stack/links), and a contact CTA section. Dark theme.',
+        team:      'Build a complete Team page with: header, leadership section (3 large cards with photo/bio), full team grid (8 smaller cards with photo placeholder/name/role/social links), and hiring CTA. Dark theme.',
+        services:  'Build a complete Services page with: header, 6 service cards with icons and descriptions, process/how-it-works timeline, client testimonials section, and contact CTA. Dark theme.',
+    };
+
+    // Exact match first
+    if (map[n]) return map[n];
+
+    // Fuzzy match — check if any key appears in the page name or vice versa
+    for (const [key, prompt] of Object.entries(map)) {
+        if (n.includes(key) || key.includes(n)) return prompt;
+    }
+
+    // Generic fallback for unrecognised page names
+    return `Build a complete ${pageName} page with appropriate sections for this content type. Include a hero/header section, main content area with relevant components, and a bottom CTA. Dark theme, modern glassmorphism design, multiple well-styled sections.`;
+};
+
 // ─── PROVIDER ────────────────────────────────────────────────────────────────
 
 export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -1369,10 +1400,12 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
                 )
                 ?? currentPage.rootId;
 
-            const result = await generateWithAI(prompt, currentElements, {
-                pageRootId: canvasNodeId,   // canvas context describes the artboard tree
-                pageName: currentPage.name,
-            });
+            const result = await generateWithAI(
+                prompt,
+                currentElements,
+                { pageRootId: canvasNodeId, pageName: currentPage.name },
+                currentPages.map(p => ({ name: p.name, slug: p.slug }))  // Part 3: pass page slugs
+            );
 
             if (result.action === 'error') {
                 console.warn('❌ AI Error:', result.message);
@@ -1476,6 +1509,25 @@ export const ProjectProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     // populate runAIRef now that runAI is defined. runAIRef was initialized as null earlier (before runAI's useCallback) to avoid a forward-reference TS error
     useEffect(() => { runAIRef.current = runAI; }, [runAI]);
+
+    // vectra:generate-page — fired by the Pages panel when the user creates a new page
+    // and wants AI to fill it. The page already exists and is active (350ms delay in panel).
+    // runAIRef used (not runAI directly) to avoid stale closure without adding runAI to deps.
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { pageName } = (e as CustomEvent<{ pageName: string }>).detail;
+            if (!pageName || !runAIRef.current) return;
+            // Small delay so the new page canvas is fully mounted before AI runs
+            setTimeout(() => {
+                const prompt = buildPagePrompt(pageName);
+                runAIRef.current!(prompt).catch(err =>
+                    console.warn(`[Vectra] AI page generation failed for "${pageName}":`, err)
+                );
+            }, 400);
+        };
+        window.addEventListener('vectra:generate-page', handler);
+        return () => window.removeEventListener('vectra:generate-page', handler);
+    }, []); // runAIRef is a stable ref — empty deps is correct
 
     // CF-1 — addFrame ─────────────────────────────────────────────────────────────
     // Spawns a mirror frame. ALL spawned frames have props.mirrorOf=sourceFrameId

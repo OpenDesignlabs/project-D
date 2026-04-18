@@ -20,6 +20,8 @@ export interface GenerateRequest {
   /** Which model to use — Server picks default if omitted */
   model?: string;
   temperature?: number;
+  /** All pages in the project — used to inject real slugs into Navbar href attributes */
+  pages?: Array<{ name: string; slug: string }>;
 }
 
 /**

@@ -265,6 +265,8 @@ const callDirectAPIWithStreaming = async (
             // Pass the user-selected model so the server can route to Ollama or HF.
             // Falls back to server default when not set.
             model: localStorage.getItem('vectra_selected_model') || undefined,
+            // Pass page list for slug-aware Navbar hrefs (Part 3).
+            pages: (window as any).__vectra_pages as Array<{ name: string; slug: string }> | undefined,
         }),
     });
 
@@ -442,7 +444,8 @@ const extractSections = (rawCode: string): Map<string, string> => {
 const processCloudLLM = async (
     prompt: string,
     _currentElements: VectraProject,
-    canvasContext?: string
+    canvasContext?: string,
+    pages?: Array<{ name: string; slug: string }>
 ): Promise<AIResponse> => {
 
     // ── API KEY GATE ────────────────────────────────────────────────────────────────────────
@@ -642,6 +645,8 @@ ${canvasContext}
 
         // Store canvasContext so callDirectAPIWithStreaming can forward it to the server
         (window as any).__vectra_last_canvas_context = canvasContext;
+        // Store page list so callDirectAPIWithStreaming can forward it to the server
+        (window as any).__vectra_pages = pages;
 
         // Use streaming variant so MagicBar gets live section ticker.
         // SRE Agent (fixComponentError) keeps callDirectAPI — see SPRINT-B-FIX-4-PERM.
@@ -1005,7 +1010,8 @@ export const editSection = async (
 export const generateWithAI = async (
     prompt: string,
     currentElements: VectraProject,
-    pageContext?: { pageRootId: string; pageName: string }   // Direction C
+    pageContext?: { pageRootId: string; pageName: string },   // Direction C
+    pages?: Array<{ name: string; slug: string }>             // Part 3: slug-aware Navbar hrefs
 ): Promise<AIResponse> => {
 
     // Tier 1: Local heuristics (instant, zero-cost)
@@ -1020,7 +1026,7 @@ export const generateWithAI = async (
         : undefined;
 
     // Tier 2: Cloud LLM generation
-    const cloudResult = await processCloudLLM(prompt, currentElements, canvasContext);
+    const cloudResult = await processCloudLLM(prompt, currentElements, canvasContext, pages);
 
     // Tier 3: Template fallback if cloud fails
     if (cloudResult.action === 'error') {

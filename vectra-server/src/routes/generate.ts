@@ -58,7 +58,7 @@ function repairJSON(s: string): string {
   return fixed;
 }
 
-function buildSystemPrompt(isPagePrompt: boolean, canvasContext?: string): string {
+function buildSystemPrompt(isPagePrompt: boolean, canvasContext?: string, pages?: Array<{ name: string; slug: string }>): string {
   const pageBlock = [
     '══════════════════════════════════════════════════════════════════════',
     'BLOCK 1 — SECTION CODE (FULL PAGE)',
@@ -235,6 +235,10 @@ function buildSystemPrompt(isPagePrompt: boolean, canvasContext?: string): strin
       canvasContext + '\n- DO NOT duplicate sections already present.\n- Match existing visual style.'
     : '';
 
+  const pagesBlock = pages && pages.length > 1
+    ? `\n══════════════════════════════════════════════════════════════════════\nPROJECT PAGES — USE THESE EXACT SLUGS FOR INTERNAL LINKS\n${pages.map(p => `  ${p.name}: href="${p.slug}"`).join('\n')}\nIn Navbar <a href> attributes, use these exact slugs. Example: href="${pages[1]?.slug || '/about'}"`
+    : '';
+
   const rules = [
     '══════════════════════════════════════════════════════════════════════',
     'REACT RULES — ALL REQUIRED',
@@ -253,6 +257,7 @@ function buildSystemPrompt(isPagePrompt: boolean, canvasContext?: string): strin
     '- Section roots: w-full. Single root element. NO position:absolute on sections.',
     '- Make it STUNNING but SAFE: prefer known Tailwind utilities.',
     canvasBlock,
+    pagesBlock,
   ].join('\n');
 
   return [
@@ -278,7 +283,7 @@ generateRoute.post('/', async (c) => {
     return c.json<GenerateResponse>({ action: 'error', message: 'Invalid request body' }, 400);
   }
 
-  const { prompt, canvasContext } = body;
+  const { prompt, canvasContext, pages } = body;
 
   if (!prompt?.trim()) {
     return c.json<GenerateResponse>({ action: 'error', message: 'prompt is required' }, 400);
@@ -287,7 +292,7 @@ generateRoute.post('/', async (c) => {
 
 
   const isPagePrompt = /page|website|portfolio|landing|blog|store|dashboard/i.test(prompt);
-  const systemPrompt = buildSystemPrompt(isPagePrompt, canvasContext);
+  const systemPrompt = buildSystemPrompt(isPagePrompt, canvasContext, pages);
   // model: studio sends preferred model, or falls back to server default.
   // Prefix 'ollama:' routes to local Ollama; bare names go to HuggingFace Router.
   const model = body.model ?? SERVER_AI_CONFIG.primaryModel;

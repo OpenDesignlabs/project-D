@@ -1586,10 +1586,10 @@ export function cn(...inputs: ClassValue[]) {
       lint: 'next lint',
     },
     dependencies: {
-      next: '14.2.5',
+      next: '^15.1.0',
       react: '^18.3.1',
       'react-dom': '^18.3.1',
-      'lucide-react': '^0.577.0',
+      'lucide-react': '^0.469.0',
       'framer-motion': '^11.3.0',
       clsx: '^2.0.0',
       'tailwind-merge': '^2.0.0',

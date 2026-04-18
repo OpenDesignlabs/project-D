@@ -428,7 +428,7 @@ export interface EditorContextType {
     setFramework: (fw: Framework) => void;
 
     // ── AI ────────────────────────────────────────────────────────────────────
-    runAI: (prompt: string, pageId: string) => void;
+    runAI: (prompt: string) => Promise<string | undefined>;
 
     // ── Multi-project ─────────────────────────────────────────────────────────
     projectId: string;

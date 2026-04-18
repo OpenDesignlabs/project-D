@@ -9,6 +9,7 @@ import {
     Server, Zap, CheckCircle2, Rocket, Link2, FileArchive, Figma, Cpu,
     Send, TerminalSquare, ChevronUp, Settings2,
     Copy as CopyIcon, RotateCcw as RefreshCw, FlaskConical,
+    LayoutDashboard, FileText,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { processImportedCode, generateComponentId } from '../../utils/import/importHelpers';
@@ -515,6 +516,8 @@ export const LeftSidebar = () => {
         apiRoutes, addApiRoute, updateApiRoute, deleteApiRoute,
         isInsertDrawerOpen, toggleInsertDrawer,
         framework,
+        // Pages panel
+        pages, activePageId, addPage, deletePage, switchPage,
     } = useEditor();
 
     const {
@@ -768,6 +771,7 @@ export const LeftSidebar = () => {
                     <NavButton icon={Server} active={activePanel === 'backend'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('backend'); }} tooltip="Backend (API Routes)" />
                 )}
                 <div className="w-8 h-px bg-[#4f4f4f] my-1" />
+                <NavButton icon={LayoutDashboard} active={activePanel === 'pages'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('pages'); }} tooltip="Pages" />
                 <NavButton icon={Store} active={activePanel === 'marketplace'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('marketplace'); }} tooltip="Marketplace" />
                 <NavButton icon={Layers} active={activePanel === 'layers'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('layers'); }} tooltip="Layers" />
                 <NavButton icon={ImageIcon} active={activePanel === 'assets'} onClick={() => { if (isInsertDrawerOpen) toggleInsertDrawer(); togglePanel('assets'); }} tooltip="Assets" />
@@ -1575,6 +1579,106 @@ export const LeftSidebar = () => {
                 <Suspense fallback={<PanelFallback />}>
                     <LoaderPanel />
                 </Suspense>
+            )}
+
+            {/* ── Pages Panel ─────────────────────────────────────────────── */}
+            {activePanel === 'pages' && (
+                <div className="absolute left-[60px] top-0 bottom-0 w-[240px] bg-[#1e1e1e] border-r border-[#3f3f46] shadow-2xl z-40 flex flex-col text-[#cccccc]">
+                    {/* Header */}
+                    <div className="px-3 py-2 border-b border-[#252526] flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-1.5">
+                            <LayoutDashboard size={12} className="text-[#007acc]" />
+                            <span className="text-[11px] font-bold text-[#ccc] uppercase tracking-wider">Pages</span>
+                        </div>
+                        <button
+                            onClick={() => addPage('New Page')}
+                            className="flex items-center gap-1 text-[10px] text-[#007acc] hover:text-white transition-colors px-1.5 py-0.5 rounded hover:bg-[#007acc]/10"
+                            title="Add blank page"
+                        >
+                            <Plus size={10} /> Add
+                        </button>
+                    </div>
+
+                    {/* Page list */}
+                    <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1 custom-scrollbar">
+                        {(pages ?? []).filter((p: any) => !p.hidden).map((page: any) => (
+                            <div
+                                key={page.id}
+                                onClick={() => switchPage(page.id)}
+                                className={cn(
+                                    'group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-all',
+                                    page.id === activePageId
+                                        ? 'bg-[#007acc]/15 border border-[#007acc]/30'
+                                        : 'hover:bg-[#2a2a2c] border border-transparent'
+                                )}
+                            >
+                                <FileText
+                                    size={12}
+                                    className={page.id === activePageId ? 'text-[#007acc] shrink-0' : 'text-[#555] shrink-0'}
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <p className={cn('text-[11px] font-medium truncate', page.id === activePageId ? 'text-white' : 'text-[#aaa]')}>
+                                        {page.name}
+                                    </p>
+                                    <p className="text-[9px] text-[#444] font-mono truncate">{page.slug}</p>
+                                </div>
+                                {page.id !== 'page-home' && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); deletePage(page.id); }}
+                                        className="opacity-0 group-hover:opacity-100 p-0.5 text-[#555] hover:text-red-400 transition-all shrink-0"
+                                        title="Delete page"
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* AI multi-page generator */}
+                    <div className="p-3 border-t border-[#252526] shrink-0">
+                        <p className="text-[9px] text-[#555] uppercase tracking-wider font-bold mb-2">Generate with AI</p>
+                        <div className="flex gap-1.5 flex-wrap mb-2.5">
+                            {['About', 'Pricing', 'Contact', 'Blog', 'FAQ'].map(name => (
+                                <button
+                                    key={name}
+                                    onClick={() => {
+                                        addPage(name);
+                                        setTimeout(() => {
+                                            window.dispatchEvent(new CustomEvent('vectra:generate-page', {
+                                                detail: { pageName: name }
+                                            }));
+                                        }, 350);
+                                    }}
+                                    className="text-[9px] px-2 py-1 rounded border border-[#2a2a2c] text-[#666] hover:text-[#007acc] hover:border-[#007acc]/40 transition-all"
+                                >
+                                    + {name}
+                                </button>
+                            ))}
+                        </div>
+                        <input
+                            type="text"
+                            placeholder='e.g. "Dashboard" or "Team"'
+                            className="w-full bg-[#111] border border-[#2a2a2c] rounded px-2 py-1.5 text-[10px] text-white placeholder-[#333] outline-none focus:border-[#007acc]/40 font-sans"
+                            onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                    const val = (e.target as HTMLInputElement).value.trim();
+                                    if (!val) return;
+                                    addPage(val);
+                                    setTimeout(() => {
+                                        window.dispatchEvent(new CustomEvent('vectra:generate-page', {
+                                            detail: { pageName: val }
+                                        }));
+                                    }, 350);
+                                    (e.target as HTMLInputElement).value = '';
+                                }
+                            }}
+                        />
+                        <p className="text-[8px] text-[#333] mt-1.5 leading-relaxed">
+                            Creates the page then uses AI to fill it with relevant sections.
+                        </p>
+                    </div>
+                </div>
             )}
 
             {/* Insert Drawer (Overlay) */}
