@@ -153,6 +153,60 @@ const MODEL_OPTIONS = [
         provider: 'local',
         icon:     'Layers',
     },
+    {
+        id:       'gemini-flash',
+        label:    'Gemini Flash Preview',
+        sublabel: 'Google • Cloud ⚡',
+        model:    'ollama:gemini-3-flash-preview:cloud',
+        color:    '#34d399',  // emerald/teal — Google brand
+        provider: 'cloud',
+        icon:     'Zap',
+    },
+    {
+        id:       'deepseek-v3',
+        label:    'DeepSeek V3.1 671B',
+        sublabel: 'DeepSeek • Cloud',
+        model:    'ollama:deepseek-v3.1:671b-cloud',
+        color:    '#f97316',  // orange
+        provider: 'cloud',
+        icon:     'Brain',
+    },
+    {
+        id:       'gemini-flash-lite',
+        label:    'Gemini 3.1 Flash Lite',
+        sublabel: 'Google • Cloud · Fastest',
+        model:    'gemini:gemini-3.1-flash-lite-preview',
+        color:    '#34a853',  // Google green
+        provider: 'cloud',
+        icon:     'Wind',
+    },
+    {
+        id:       'gemini-3-flash',
+        label:    'Gemini 3 Flash',
+        sublabel: 'Google • Cloud · Stable',
+        model:    'gemini:gemini-3-flash-preview',
+        color:    '#ea4335',  // Google red
+        provider: 'cloud',
+        icon:     'Sparkles',
+    },
+    {
+        id:       'nemotron-3-super',
+        label:    'Nemotron 3 Super',
+        sublabel: 'NVIDIA • Cloud',
+        model:    'ollama:nemotron-3-super:cloud',
+        color:    '#76b900',  // NVIDIA green
+        provider: 'cloud',
+        icon:     'Cpu',
+    },
+    {
+        id:       'minimax-m2-5',
+        label:    'MiniMax M2.5',
+        sublabel: 'MiniMax • Cloud',
+        model:    'ollama:minimax-m2.5:cloud',
+        color:    '#c084fc',  // purple
+        provider: 'cloud',
+        icon:     'Layers',
+    },
 ] as const;
 
 type ModelId = typeof MODEL_OPTIONS[number]['id'];
@@ -774,7 +828,7 @@ export const MagicBar = () => {
 
                         {/* Model picker — bottom-left, collapsible */}
                         {status === 'idle' && (() => {
-                            const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind, Layers, Sparkles };
+                            const iconMap: Record<string, React.ElementType> = { Bot, Cpu, Code2, Brain, Wind, Layers, Sparkles, Zap };
                             const activeOpt = MODEL_OPTIONS.find(m => m.id === selectedModelId) ?? MODEL_OPTIONS[0];
                             const ActiveIcon = iconMap[activeOpt.icon] ?? Cpu;
                             return (

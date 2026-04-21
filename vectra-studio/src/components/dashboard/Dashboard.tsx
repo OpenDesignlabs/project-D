@@ -288,8 +288,8 @@ interface UndoToastProps {
 
 const UndoToast: React.FC<UndoToastProps> = ({ projectName, durationMs, onUndo, onDismiss }) => (
     <div
-        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-200 flex items-center gap-4 px-5 py-3 bg-[#1e1e1e] border border-white/10 rounded-xl shadow-2xl text-sm min-w-[320px]"
-        style={{ animation: 'slideUpFadeIn 0.2s ease-out' }}
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 px-6 py-4 bg-slate-900/80 backdrop-blur-3xl border border-white/10 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-sm min-w-[340px]"
+        style={{ animation: 'slideUpFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
         role="status"
         aria-live="polite"
     >
@@ -397,10 +397,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     return (
         <div
             className={cn(
-                'group relative flex flex-col p-5 rounded-xl border transition-all duration-200',
+                'group relative flex flex-col p-5 rounded-3xl border transition-all duration-300 backdrop-blur-xl',
                 isActive
-                    ? 'border-[#007acc]/40 bg-[#141b24] shadow-lg shadow-[#007acc]/5'
-                    : 'border-white/5 bg-[#121214] hover:border-white/10 hover:bg-[#141414]',
+                    ? 'border-blue-500/50 bg-blue-950/20 shadow-[0_8px_30px_rgba(59,130,246,0.15)] ring-1 ring-blue-500/30'
+                    : 'border-white/5 bg-slate-900/30 hover:border-white/20 hover:bg-slate-800/50 hover:shadow-2xl hover:-translate-y-1',
             )}
         >
             {/* Active indicator */}
@@ -417,7 +417,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 />
             )}
             {/* ── Wireframe Thumbnail ─────────────────────────────────────── */}
-            <div className="w-full h-[140px] rounded-lg overflow-hidden mb-4 bg-[#0a0a0b] border border-white/5 flex items-center justify-center shrink-0 relative">
+            <div className="w-full h-[140px] rounded-2xl overflow-hidden mb-5 bg-[#0a0a0b] border border-white/5 flex items-center justify-center shrink-0 relative transition-transform duration-500 group-hover:scale-[1.02]">
                 {thumbSvg ? (
                     <img
                         src={`data:image/svg+xml,${encodeURIComponent(thumbSvg)}`}
@@ -626,18 +626,18 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                     id={`open-project-${meta.id}`}
                     onClick={onOpen}
                     className={cn(
-                        'mt-auto w-full flex items-center justify-center gap-2 text-[10px] p-2 rounded border transition-all',
+                        'mt-auto w-full flex items-center justify-center gap-2 text-[11px] font-bold p-2.5 rounded-xl border transition-all duration-300',
                         isActive
-                            ? 'bg-[#007acc]/10 border-[#007acc]/30 text-[#007acc] hover:bg-[#007acc]/20'
-                            : 'text-zinc-600 bg-black/20 hover:bg-[#007acc]/10 hover:text-[#007acc] border-white/5 hover:border-[#007acc]/30',
+                            ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
+                            : 'text-slate-400 bg-black/20 hover:bg-blue-500/10 hover:text-blue-400 border-white/5 hover:border-blue-500/30',
                     )}
                 >
                     <span className={cn(
-                        'w-1.5 h-1.5 rounded-full',
-                        isActive ? 'bg-[#007acc]' : 'bg-green-500',
+                        'w-1.5 h-1.5 rounded-full shadow-sm',
+                        isActive ? 'bg-blue-400' : 'bg-emerald-400',
                     )} />
                     <span>{isActive ? 'Continue Editing' : 'Open in Editor'}</span>
-                    <ChevronRight size={10} className="ml-auto" />
+                    <ChevronRight size={12} className="ml-auto" />
                 </button>
             )}
         </div>
@@ -650,13 +650,13 @@ const CreateNewCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     <button
         id="create-new-project-card"
         onClick={onClick}
-        className="group p-5 rounded-xl border border-dashed border-white/8 hover:border-white/18 bg-transparent hover:bg-white/1.5 transition-all text-left"
+        className="group p-5 rounded-3xl border-2 border-dashed border-white/10 hover:border-white/20 bg-slate-900/10 hover:bg-slate-800/30 backdrop-blur-xl transition-all duration-300 text-left hover:-translate-y-1 hover:shadow-2xl"
     >
-        <div className="flex items-center justify-center w-full min-h-[180px] flex-col gap-3 text-zinc-700 group-hover:text-zinc-500 transition-colors">
-            <div className="w-10 h-10 rounded-lg border border-dashed border-current flex items-center justify-center transition-transform group-hover:scale-110">
-                <Plus size={20} />
+        <div className="flex items-center justify-center w-full min-h-[180px] flex-col gap-4 text-slate-500 group-hover:text-slate-300 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:bg-white/10 group-hover:rotate-3 shadow-inner">
+                <Plus size={24} />
             </div>
-            <span className="text-sm font-medium">New Project</span>
+            <span className="text-sm font-bold tracking-wide">New Project</span>
         </div>
     </button>
 );
@@ -664,26 +664,26 @@ const CreateNewCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 // ─── EMPTY STATE ──────────────────────────────────────────────────────────────
 
 const EmptyState: React.FC<{ onCreateClick: () => void }> = ({ onCreateClick }) => (
-    <div className="flex flex-col items-center justify-center py-28 text-center">
-        <div className="relative mb-8">
-            <div className="w-20 h-20 rounded-2xl bg-[#141414] border border-white/5 flex items-center justify-center">
-                <FolderOpen size={32} className="text-zinc-700" />
+    <div className="flex flex-col items-center justify-center py-32 text-center">
+        <div className="relative mb-10 group">
+            <div className="w-24 h-24 rounded-3xl bg-slate-900/60 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-2xl transition-transform duration-500 group-hover:scale-105 z-10 relative">
+                <FolderOpen size={40} className="text-blue-400/80" />
             </div>
             {/* Decoration rings */}
-            <div className="absolute inset-0 rounded-2xl border border-white/3 scale-110" />
-            <div className="absolute inset-0 rounded-2xl border border-white/1.5 scale-125" />
+            <div className="absolute inset-0 rounded-3xl border border-blue-500/20 scale-110 opacity-60 animate-[pulse_3s_ease-in-out_infinite]" />
+            <div className="absolute inset-0 rounded-3xl border border-purple-500/10 scale-125 opacity-40 animate-[pulse_4s_ease-in-out_infinite]" />
         </div>
-        <h2 className="text-xl font-bold text-zinc-400 mb-2">No projects yet</h2>
-        <p className="text-zinc-600 text-sm mb-10 max-w-xs leading-relaxed">
+        <h2 className="text-3xl font-black text-white mb-4 tracking-tight">No projects yet</h2>
+        <p className="text-slate-400 text-base mb-10 max-w-sm leading-relaxed">
             Create your first project to get started. Choose between
             Next.js for full-stack apps or Vite for a lightning-fast SPA.
         </p>
         <button
             id="empty-state-create-btn"
             onClick={onCreateClick}
-            className="flex items-center gap-2 px-6 py-3 bg-white text-black text-sm font-bold rounded-xl hover:bg-zinc-100 transition-all shadow-lg shadow-black/30"
+            className="flex items-center gap-2 px-8 py-4 bg-white text-black text-sm font-bold rounded-2xl hover:bg-zinc-200 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] hover:-translate-y-1 active:scale-95"
         >
-            <Plus size={16} /> Create your first project
+            <Plus size={18} /> Create your first project
         </button>
     </div>
 );
@@ -905,19 +905,18 @@ export const Dashboard = () => {
     // ─── VIEW 1: PROJECT LIST ──────────────────────────────────────────────────
     if (view === 'home') {
         return (
-            <div className="min-h-screen bg-[#09090b] text-white font-sans selection:bg-blue-500/30 flex flex-col">
+            <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30 flex flex-col relative overflow-hidden">
 
-                {/* Ambient background gradient */}
-                <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-purple-700/5 rounded-full blur-3xl" />
+                {/* Premium Ambient Background */}
+                <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+                    <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-blue-600/10 blur-[130px] mix-blend-screen animate-pulse" style={{ animationDuration: '10s' }} />
+                    <div className="absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-purple-600/10 blur-[130px] mix-blend-screen animate-pulse" style={{ animationDuration: '12s' }} />
                 </div>
 
-                {/* ── Sticky header ── */}
-                <header className="border-b border-white/5 px-8 py-4 flex items-center justify-between bg-[#09090b]/90 backdrop-blur-sm sticky top-0 z-10">
+                {/* ── Floating Header ── */}
+                <header className="mx-8 mt-6 mb-4 px-6 py-4 flex items-center justify-between bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-3xl sticky top-6 z-30 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-linear-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
-                            <Layout size={18} className="text-white" />
-                        </div>
+                        <img src="/favicon.svg" alt="Vectra logo" className="w-8 h-8 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]" />
                         <span className="font-bold text-lg tracking-tight">Vectra</span>
                         <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-[10px] font-bold rounded-full border border-purple-500/20">
                             BETA
@@ -1095,16 +1094,17 @@ export const Dashboard = () => {
         );
     }
 
-    // ─── VIEW 2: FRAMEWORK SELECTOR (preserved from Phase E) ──────────────────
+    // ─── VIEW 2: FRAMEWORK SELECTOR (M3 Styled) ──────────────────
     return (
-        <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-4 font-sans">
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
 
-            {/* Background gradient */}
-            <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-3xl" />
+            {/* Premium Ambient Background */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute top-[10%] left-[20%] w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: '8s' }} />
+                <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: '10s' }} />
             </div>
 
-            <div className="relative w-full max-w-3xl">
+            <div className="relative w-full max-w-4xl z-10 py-12">
 
                 {/* Back link */}
                 <button
@@ -1131,13 +1131,14 @@ export const Dashboard = () => {
                                 key={fw.id}
                                 onClick={() => setSelectedFramework(fw.id)}
                                 className={cn(
-                                    'relative p-6 rounded-2xl border text-left transition-all duration-200 bg-linear-to-br',
-                                    fw.gradient,
+                                    'relative p-8 rounded-[2rem] border text-left transition-all duration-500 backdrop-blur-2xl overflow-hidden group',
                                     isSelected
-                                        ? `${fw.borderActive} shadow-lg shadow-black/30 scale-[1.01]`
-                                        : `${fw.borderIdle} hover:border-white/20`,
+                                        ? 'border-blue-500/50 bg-blue-900/20 shadow-[0_0_40px_rgba(59,130,246,0.15)] ring-2 ring-blue-500/30 scale-[1.02] -translate-y-1'
+                                        : 'border-white/5 bg-slate-900/30 hover:bg-slate-800/50 hover:border-white/20 hover:shadow-2xl hover:-translate-y-1',
                                 )}
                             >
+                                {/* Glass shine overlay */}
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 bg-linear-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full pointer-events-none" style={{ transition: 'all 1s ease' }} />
                                 {/* Recommended badge */}
                                 {fw.badge && !isSelected && (
                                     <div className={cn(
@@ -1200,11 +1201,10 @@ export const Dashboard = () => {
                                     key={tpl.id}
                                     onClick={() => setSelectedTemplate(tpl.id)}
                                     className={cn(
-                                        'relative flex flex-col items-start rounded-xl border text-left transition-all duration-150 overflow-hidden',
-                                        tpl.accent,
+                                        'relative flex flex-col items-start rounded-2xl border text-left transition-all duration-300 overflow-hidden backdrop-blur-xl',
                                         isSel
-                                            ? 'ring-2 ring-white/30 scale-[1.01] shadow-lg shadow-black/40'
-                                            : 'hover:scale-[1.005] hover:brightness-110 opacity-80 hover:opacity-100'
+                                            ? 'border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/40 shadow-[0_8px_30px_rgba(59,130,246,0.2)] scale-[1.02]'
+                                            : 'border-white/5 bg-slate-900/40 hover:bg-slate-800/60 hover:border-white/20 hover:-translate-y-1 hover:shadow-xl opacity-90 hover:opacity-100'
                                     )}
                                 >
                                     {/* SVG wireframe preview */}
@@ -1236,22 +1236,22 @@ export const Dashboard = () => {
                 </div>
 
                 {/* Selected framework summary bar */}
-                <div className="bg-[#121214] border border-white/5 rounded-xl p-4 mb-6 flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                <div className="bg-slate-900/50 backdrop-blur-lg border border-white/10 rounded-2xl p-4 mb-8 flex items-center gap-4 shadow-xl">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 shadow-inner">
                         {FRAMEWORKS.find(f => f.id === selectedFramework)?.icon}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-white">
+                        <div className="text-sm font-bold text-white">
                             {FRAMEWORKS.find(f => f.id === selectedFramework)?.name}
                         </div>
-                        <div className="text-[10px] font-mono text-zinc-600 mt-0.5">
+                        <div className="text-[10px] font-mono text-slate-400 mt-1">
                             {selectedFramework === 'nextjs'
                                 ? 'npm install && npm run dev → localhost:3000'
                                 : 'npm install && npm run dev → localhost:5173'}
                         </div>
                     </div>
-                    <div className="text-[9px] text-zinc-600 flex items-center gap-1 shrink-0">
-                        <CheckCircle2 size={11} className="text-emerald-500" /> Production ready
+                    <div className="text-[10px] text-zinc-500 flex items-center gap-1.5 shrink-0 px-3 py-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                        <CheckCircle2 size={12} className="text-emerald-400" /> Production ready
                     </div>
                 </div>
 
@@ -1260,25 +1260,36 @@ export const Dashboard = () => {
                     id="create-project-btn"
                     onClick={handleCreate}
                     disabled={isCreating}
-                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-black text-base font-bold rounded-xl hover:bg-zinc-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-black/20 active:scale-[0.99]"
+                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-black text-base font-bold rounded-2xl hover:bg-zinc-200 transition-all disabled:opacity-0 disabled:pointer-events-none shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] hover:-translate-y-1 active:scale-[0.98]"
                 >
-                    {isCreating ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                            Initializing project…
-                        </>
-                    ) : (
-                        <>
-                            <Plus size={18} />
-                            Create Project with {FRAMEWORKS.find(f => f.id === selectedFramework)?.name}
-                            <ChevronRight size={16} className="ml-auto" />
-                        </>
-                    )}
+                    <Plus size={18} />
+                    Create Project with {FRAMEWORKS.find(f => f.id === selectedFramework)?.name}
+                    <ChevronRight size={16} className="ml-auto" />
                 </button>
 
-                <p className="text-center text-zinc-600 text-xs mt-4">
+                <p className="text-center text-slate-500 text-xs mt-6">
                     Framework is locked per project. Create a new project to switch.
                 </p>
+
+                {/* ── Animated Loading Overlay ── */}
+                {isCreating && (
+                    <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-3xl transition-all duration-500" style={{ animation: 'slideUpFadeIn 0.3s ease-out' }}>
+                        <div className="relative flex items-center justify-center mb-8">
+                            <div className="absolute inset-0 rounded-full blur-[60px] bg-blue-500/30 animate-pulse" style={{ animationDuration: '3s' }} />
+                            <div className="w-24 h-24 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-md shadow-2xl relative z-10 overflow-hidden">
+                                <div className="absolute inset-0 bg-linear-to-tr from-blue-500/20 to-purple-500/20 animate-pulse" style={{ animationDuration: '2s' }} />
+                                <img src="/favicon.svg" alt="Vectra" className="w-12 h-12 relative z-10 animate-bounce drop-shadow-[0_0_12px_rgba(168,85,247,0.6)]" style={{ animationDuration: '2s' }} />
+                            </div>
+                            <div className="absolute w-[180%] h-[180%] border-t-2 border-r-2 border-blue-500/30 rounded-full animate-[spin_3s_linear_infinite]" />
+                            <div className="absolute w-[220%] h-[220%] border-b-2 border-l-2 border-purple-500/30 rounded-full animate-[spin_4s_linear_infinite_reverse]" />
+                        </div>
+                        <h2 className="text-3xl font-black text-white mb-3 tracking-tight">Building your vision</h2>
+                        <p className="text-slate-400 font-medium tracking-wide flex items-center gap-2">
+                            <Loader2 size={14} className="animate-spin text-blue-400" />
+                            Installing {FRAMEWORKS.find(f => f.id === selectedFramework)?.name} environment...
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { callHFStreaming, callOllamaStreaming, SERVER_AI_CONFIG } from '../lib/hf-client';
+import { callGeminiStreaming } from '../lib/gemini-client';
 import type { GenerateRequest, GenerateResponse } from '../types';
 
 export const generateRoute = new Hono();
@@ -244,18 +245,56 @@ function buildSystemPrompt(isPagePrompt: boolean, canvasContext?: string, pages?
     'REACT RULES — ALL REQUIRED',
     '',
     '- Signature: export default function SectionName(props) { ... }',
-    '- NO import statements. React, motion, Lucide, cn are globally injected.',
-    '- Hooks (useState/useEffect/useRef) MUST be at the TOP of the function. NEVER inside map/if/callbacks.',
-    '- Icons — two safe patterns ONLY:',
-    '    Static:  <Lucide.Star size={20} />',
-    '    Dynamic: const IC = (typeof Lucide[name] === "function" ? Lucide[name] : null) || Lucide.Star; return <IC />;',
-    '    FATAL:   <Lucide[name] />  — bracket notation in JSX is a syntax error. NEVER do this.',
-    '    FATAL:   <Icon name="..." />  — Icon is not defined.',
-    '- Arrays: ALWAYS guard: (items ?? []).map(...)  — undefined.map() crashes the renderer.',
-    '- Tailwind gradients: bg-gradient-to-* ONLY. NEVER bg-linear-to-* (Tailwind v4 only).',
-    '- Framer Motion: animate opacity/scale/x/y/rotate only. whileHover={{ boxShadow: "0 0 24px #3b82f6" }}',
+    '- NO import statements. ALL globals listed below are pre-injected. Using import will crash.',
+    '',
+    '── GLOBALLY AVAILABLE APIS ────────────────────────────────────────────',
+    '',
+    'REACT HOOKS (destructured from React):',
+    '  useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect,',
+    '  useReducer, useContext, createContext, Fragment,',
+    '  useId, useTransition, useDeferredValue',
+    '',
+    'FRAMER MOTION (destructured from Motion):',
+    '  motion, AnimatePresence, useAnimation, useInView,',
+    '  useMotionValue, useTransform, useSpring, useScroll,',
+    '  useMotionTemplate, useMotionValueEvent',
+    '  Usage: <motion.div animate={{opacity:1}} /> or useScroll() for parallax',
+    '',
+    'LUCIDE ICONS:',
+    '  Static:  <Lucide.Star size={20} />',
+    '  Dynamic: const IC = (typeof Lucide[name]==="function"?Lucide[name]:null)||Lucide.Star; return <IC />;',
+    '  FATAL:   <Lucide[name] />  — bracket notation in JSX is a syntax error. NEVER do this.',
+    '  FATAL:   <Icon name="..." />  — Icon component is NOT defined.',
+    '',
+    'CLASS UTILITY:',
+    '  cn(...classes) — powered by clsx + tailwind-merge.',
+    '  Resolves Tailwind conflicts: cn("p-4", active && "p-8") → "p-8" (NOT "p-4 p-8").',
+    '  Use for dynamic/conditional Tailwind classes.',
+    '',
+    'CHARTS — Recharts:',
+    '  Available as Recharts.* — use for data visualizations in dashboard sections.',
+    '  Example: <Recharts.BarChart data={data} width={400} height={300}>',
+    '    <Recharts.CartesianGrid strokeDasharray="3 3" />',
+    '    <Recharts.XAxis dataKey="name" />',
+    '    <Recharts.Bar dataKey="value" fill="#3b82f6" />',
+    '  </Recharts.BarChart>',
+    '  Other components: LineChart, AreaChart, PieChart, RadarChart, Tooltip, Legend',
+    '',
+    'TYPOGRAPHY:',
+    '  Inter font is globally loaded. Use font-sans (already mapped to Inter).',
+    '  Prefer font-sans over other font classes.',
+    '',
+    '── RULES ──────────────────────────────────────────────────────────────',
+    '',
+    '- Hooks MUST be at the TOP of the function. NEVER inside map/if/callbacks.',
+    '- Arrays: ALWAYS guard: (items ?? []).map(...)  — undefined.map() crashes.',
+    '- Tailwind gradients: bg-gradient-to-* ONLY. NOT bg-linear-to-* (Tailwind v4 only).',
+    '- Framer Motion: animate opacity/scale/x/y/rotate/translateY.',
+    '  whileHover={{ scale: 1.02 }} whileInView={{ opacity: 1 }} etc.',
+    '  Use useScroll + useTransform for parallax scroll effects.',
+    '  Use useSpring for physics-based smooth number interpolation.',
     '- Section roots: w-full. Single root element. NO position:absolute on sections.',
-    '- Make it STUNNING but SAFE: prefer known Tailwind utilities.',
+    '- Make it STUNNING: use Inter font, subtle animations, glassmorphism, gradients.',
     canvasBlock,
     pagesBlock,
   ].join('\n');
@@ -299,11 +338,23 @@ generateRoute.post('/', async (c) => {
 
   let content = '';
   try {
-    const isOllama = model.startsWith('ollama:');
-    console.log(`[vectra-server/generate] Provider: ${isOllama ? 'ollama' : 'huggingface'} — model: ${model.split('/').pop()} — "${prompt.slice(0, 60)}..."`);
+    const isOllama  = model.startsWith('ollama:');
+    const isGemini  = model.startsWith('gemini:');
+    console.log(`[vectra-server/generate] Provider: ${
+      isGemini ? 'gemini' : isOllama ? 'ollama' : 'huggingface'
+    } — model: ${model.split('/').pop()} — "${prompt.slice(0, 60)}..."`);
 
-    if (isOllama) {
-      // Ollama: local model, no API key required
+    if (isGemini) {
+      // Google Gemini API — requires GEMINI_API_KEY
+      if (!process.env.GEMINI_API_KEY) {
+        return c.json<GenerateResponse>(
+          { action: 'error', message: '🔑 GEMINI_API_KEY not set on server. Add it to vectra-server .env' },
+          500
+        );
+      }
+      content = await callGeminiStreaming(systemPrompt, `Generate: ${prompt}`, model, body.temperature ?? 0.65);
+    } else if (isOllama) {
+      // Ollama: local model via ngrok tunnel, no API key required
       content = await callOllamaStreaming(systemPrompt, `Generate: ${prompt}`, model, body.temperature ?? 0.65);
     } else {
       // HuggingFace Router: requires API key
